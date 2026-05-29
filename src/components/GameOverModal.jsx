@@ -14,7 +14,16 @@ function PlayerChips({ players }) {
   );
 }
 
-export default function GameOverModal({ mode, winner, loser, others, onRestart, onHome }) {
+export default function GameOverModal({
+  mode,
+  winner,
+  loser,
+  others,
+  onRestart,
+  onHome,
+  online = false,
+  isHost = false,
+}) {
   const isWinnerMode = mode === 'winner';
   return (
     <div className="overlay">
@@ -24,7 +33,6 @@ export default function GameOverModal({ mode, winner, loser, others, onRestart, 
         <h2 className="win-title">ゲーム終了！</h2>
 
         {isWinnerMode ? (
-          // ひとり勝ち
           winner ? (
             <div className="win-player">
               <div className="win-trophy">🏆</div>
@@ -35,8 +43,7 @@ export default function GameOverModal({ mode, winner, loser, others, onRestart, 
           ) : (
             <p>勝者なし</p>
           )
-        ) : // ひとり負け
-        loser ? (
+        ) : loser ? (
           <div className="lose-player">
             <div className="lose-stamp">ひとり負け</div>
             <div className="lose-avatar">{loser.avatar}</div>
@@ -57,12 +64,26 @@ export default function GameOverModal({ mode, winner, loser, others, onRestart, 
         )}
 
         <div className="actions-bar mt">
-          <button className="btn primary" onClick={onRestart}>
-            もう一度（同じメンバー）
-          </button>
-          <button className="btn ghost" onClick={onHome}>
-            メンバー編集へ
-          </button>
+          {online && !isHost ? (
+            // オンラインの参加者：ホストの再戦を待つ。自分で抜けるときは退出。
+            <>
+              <p className="small-muted" style={{ width: '100%', margin: '0 0 4px' }}>
+                ホストが「もう一度」を選ぶと再戦します
+              </p>
+              <button className="btn ghost" onClick={onHome}>
+                部屋を退出
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn primary" onClick={onRestart}>
+                もう一度（同じメンバー）
+              </button>
+              <button className="btn ghost" onClick={onHome}>
+                {online ? '部屋を閉じる' : 'メンバー編集へ'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

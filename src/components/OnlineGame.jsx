@@ -328,7 +328,9 @@ export default function OnlineGame({ onExit }) {
             winner={winner}
             loser={loser}
             others={others}
-            onRestart={role === 'host' ? hostRestart : leaveRoom}
+            online
+            isHost={role === 'host'}
+            onRestart={hostRestart}
             onHome={leaveRoom}
           />
         )}
