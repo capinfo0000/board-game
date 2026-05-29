@@ -14,10 +14,11 @@ function makeSeat(i, isAI) {
   };
 }
 
-export default function SetupScreen({ onStart, onOpenHelp, initialSeats }) {
+export default function SetupScreen({ onStart, onOpenHelp, initialSeats, initialLives }) {
   const [seats, setSeats] = useState(
     initialSeats || [makeSeat(0, false), makeSeat(1, true)],
   );
+  const [lives, setLives] = useState(initialLives || 3);
   const [avatarPickerFor, setAvatarPickerFor] = useState(null);
 
   function update(i, patch) {
@@ -122,6 +123,26 @@ export default function SetupScreen({ onStart, onOpenHelp, initialSeats }) {
         </button>
       </div>
 
+      <div className="card-panel">
+        <div className="row between">
+          <h2 style={{ margin: 0 }}>ライフ（チップ）</h2>
+          <div className="kind-toggle">
+            {[1, 2, 3].map((n) => (
+              <button
+                key={n}
+                className={`chip${lives === n ? ' on' : ''}`}
+                onClick={() => setLives(n)}
+              >
+                {'❤️'.repeat(n)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="small-muted" style={{ marginBottom: 0 }}>
+          ライフが0になると脱落。最後の1人が勝ちです。
+        </p>
+      </div>
+
       <div className="card-panel center">
         <p className="small-muted" style={{ marginTop: 0 }}>
           同じ端末で順番に回して遊びます（覗き見防止つき）。AIを混ぜてもOK。
@@ -130,7 +151,7 @@ export default function SetupScreen({ onStart, onOpenHelp, initialSeats }) {
           className="btn primary"
           style={{ width: '100%', fontSize: 18 }}
           disabled={!canStart}
-          onClick={() => onStart(seats)}
+          onClick={() => onStart(seats, lives)}
         >
           ゲーム開始 ▶
         </button>

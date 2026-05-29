@@ -34,6 +34,7 @@ function clone(state) {
 }
 
 let _logId = 0;
+let _bustSeq = 0;
 function addLog(state, text) {
   _logId += 1;
   state.log.push({ id: `l${_logId}`, text });
@@ -123,16 +124,17 @@ function freshTurnEffects() {
 
 // ---- ゲーム生成 ----
 
-// config: { players: [{ name, avatar, isAI, difficulty }] }
+// config: { players: [{ name, avatar, isAI, difficulty }], lives }
 export function createGame(config) {
   const deck = shuffle(buildDeck());
+  const startLives = config.lives ?? START_LIVES;
   const players = config.players.map((p, idx) => ({
     id: p.id ?? `p${idx}`,
     name: p.name,
     avatar: p.avatar ?? '🙂',
     isAI: !!p.isAI,
     difficulty: p.difficulty ?? 'normal',
-    lives: START_LIVES,
+    lives: startLives,
     hand: [],
     ultimateUsed: false,
     eliminated: false,
@@ -151,6 +153,7 @@ export function createGame(config) {
     phase: 'playing',
     winnerId: null,
     lastAction: null, // { playerId, cardId, kind, text } 直近の手（アニメ用）
+    lastBust: null, // { seq, name, total, eliminated, ... } バースト演出用
     lastDrawn: [], // 直前のプレイで引いたカードのidリスト（手札確認の演出用）
     turnId: 0, // 手番が新しいプレイヤーに確定するたびに増える（UIのパス＆プレイ用）
     log: [],
@@ -193,8 +196,9 @@ function settleTurnStart(state) {
 }
 
 function doBust(state, player) {
+  const bustTotal = state.total;
   player.lives -= 1;
-  addLog(state, `💥 ${player.name} は出せる札がなく合計${state.total}でバースト！ ライフ -1（残り${Math.max(player.lives, 0)}）`);
+  addLog(state, `💥 ${player.name} は出せる札がなく合計${bustTotal}でバースト！ ライフ -1（残り${Math.max(player.lives, 0)}）`);
 
   const bustedIndex = state.players.indexOf(player);
 
@@ -203,6 +207,18 @@ function doBust(state, player) {
     player.lives = 0;
     addLog(state, `☠️ ${player.name} は脱落しました`);
   }
+
+  // バースト演出用のイベント
+  _bustSeq += 1;
+  state.lastBust = {
+    seq: _bustSeq,
+    playerId: player.id,
+    name: player.name,
+    avatar: player.avatar,
+    total: bustTotal,
+    eliminated: player.eliminated,
+    livesLeft: player.lives,
+  };
 
   const living = livingPlayers(state);
   if (living.length <= 1) {

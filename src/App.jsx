@@ -6,6 +6,7 @@ import GameScreen from './components/GameScreen.jsx';
 import GameOverModal from './components/GameOverModal.jsx';
 import HelpModal from './components/HelpModal.jsx';
 import HandoffReview from './components/HandoffReview.jsx';
+import BustEffect from './components/BustEffect.jsx';
 
 // 生存している人間プレイヤー
 function livingHumans(g) {
@@ -24,35 +25,57 @@ function soloViewerId(g) {
 export default function App() {
   const [screen, setScreen] = useState('setup'); // 'setup' | 'game'
   const [seats, setSeats] = useState(null);
+  const [lives, setLives] = useState(3); // 初期ライフ設定（1〜3）
   const [game, setGame] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
   const [reviewPlayerId, setReviewPlayerId] = useState(null); // 手札確認中の（直前に出した）人間
+  const [bustInfo, setBustInfo] = useState(null); // バースト演出
   const [showHelp, setShowHelp] = useState(false);
 
   const prevTurnRef = useRef(-1);
+  const prevBustSeqRef = useRef(0);
   const aiTimerRef = useRef(null);
+  const bustTimerRef = useRef(null);
 
   // --- ゲーム開始 ---
-  function startGame(seatConfig) {
+  function startGame(seatConfig, livesSetting) {
+    const lv = livesSetting ?? lives;
     setSeats(seatConfig);
-    const g = createGame({ players: seatConfig });
+    setLives(lv);
+    const g = createGame({ players: seatConfig, lives: lv });
     prevTurnRef.current = -1;
+    prevBustSeqRef.current = 0;
     setReviewPlayerId(null);
+    setBustInfo(null);
     setGateOpen(false);
     setGame(g);
     setScreen('game');
   }
 
   function restart() {
-    if (seats) startGame(seats);
+    if (seats) startGame(seats, lives);
   }
 
   function goHome() {
     if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
+    if (bustTimerRef.current) clearTimeout(bustTimerRef.current);
     setGame(null);
     setReviewPlayerId(null);
+    setBustInfo(null);
     setScreen('setup');
   }
+
+  // --- バーストの演出 ---
+  useEffect(() => {
+    const bust = game?.lastBust;
+    if (!bust) return;
+    if (bust.seq !== prevBustSeqRef.current) {
+      prevBustSeqRef.current = bust.seq;
+      setBustInfo(bust);
+      if (bustTimerRef.current) clearTimeout(bustTimerRef.current);
+      bustTimerRef.current = setTimeout(() => setBustInfo(null), 1600);
+    }
+  }, [game?.lastBust?.seq]);
 
   // --- 新しい手番になったら、人間かつ覗き見防止が必要ならゲートを開く ---
   useEffect(() => {
@@ -134,6 +157,7 @@ export default function App() {
           onStart={startGame}
           onOpenHelp={() => setShowHelp(true)}
           initialSeats={seats}
+          initialLives={lives}
         />
         {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
       </div>
@@ -168,6 +192,7 @@ export default function App() {
           onPass={passHandoff}
         />
       )}
+      <BustEffect bust={bustInfo} />
       {game?.phase === 'gameOver' && (
         <GameOverModal winner={winner} onRestart={restart} onHome={goHome} />
       )}

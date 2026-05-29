@@ -1,5 +1,5 @@
 import React from 'react';
-import { LIMIT, START_LIVES, HAND_SIZE } from '../game/constants.js';
+import { LIMIT, HAND_SIZE } from '../game/constants.js';
 
 const CARD_HELP = [
   ['1〜9', 'その数字を足す'],
@@ -25,7 +25,7 @@ export default function HelpModal({ onClose }) {
         <p style={{ fontSize: 13, lineHeight: 1.6 }}>
           手札からカードを1枚出して、場の合計を増やしていきます。合計が
           <b> {LIMIT} を超える</b>札しか出せなくなったら<b>バースト</b>（ライフ−1）。
-          ライフ（最初は{START_LIVES}）が0になると脱落し、<b>最後の1人が勝ち</b>です。
+          ライフ（開始時に1〜3で設定）が0になると脱落し、<b>最後の1人が勝ち</b>です。
           カードを出したら手番の終わりに山札から1枚引きます（通常は手札{HAND_SIZE}枚をキープ）。
           山札が尽きたら、捨て札をシャッフルして山札に戻します。
         </p>
