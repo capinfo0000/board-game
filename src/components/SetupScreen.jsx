@@ -25,8 +25,8 @@ export default function SetupScreen({
   const [seats, setSeats] = useState(
     initialSeats || [makeSeat(0, false), makeSeat(1, true)],
   );
-  const [lives, setLives] = useState(initialLives || 3);
-  const [handSize, setHandSize] = useState(initialHandSize || 5);
+  const [lives, setLives] = useState(initialLives || 1);
+  const [handSize, setHandSize] = useState(initialHandSize || 3);
   const [mode, setMode] = useState(initialMode || 'loser');
   const [avatarPickerFor, setAvatarPickerFor] = useState(null);
 

@@ -26,8 +26,8 @@ function soloViewerId(g) {
 export default function App() {
   const [screen, setScreen] = useState('setup'); // 'setup' | 'game'
   const [seats, setSeats] = useState(null);
-  const [lives, setLives] = useState(3); // 初期ライフ設定（1〜3）
-  const [handSize, setHandSize] = useState(5); // 手札枚数（3〜5）
+  const [lives, setLives] = useState(1); // 初期ライフ設定（1〜3）
+  const [handSize, setHandSize] = useState(3); // 手札枚数（3〜5）
   const [mode, setMode] = useState('loser'); // 'loser'=ひとり負け / 'winner'=ひとり勝ち
   const [game, setGame] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
