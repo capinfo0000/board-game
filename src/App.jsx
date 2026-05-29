@@ -7,6 +7,7 @@ import GameOverModal from './components/GameOverModal.jsx';
 import HelpModal from './components/HelpModal.jsx';
 import HandoffReview from './components/HandoffReview.jsx';
 import BustEffect from './components/BustEffect.jsx';
+import RoundEndModal from './components/RoundEndModal.jsx';
 
 // 生存している人間プレイヤー
 function livingHumans(g) {
@@ -31,7 +32,8 @@ export default function App() {
   const [game, setGame] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
   const [reviewPlayerId, setReviewPlayerId] = useState(null); // 手札確認中の（直前に出した）人間
-  const [bustInfo, setBustInfo] = useState(null); // バースト演出
+  const [bustInfo, setBustInfo] = useState(null); // バースト演出（ゲーム終了時のフラッシュ）
+  const [roundEndInfo, setRoundEndInfo] = useState(null); // ラウンド終了（バーストで区切り）
   const [showHelp, setShowHelp] = useState(false);
 
   const prevTurnRef = useRef(-1);
@@ -53,6 +55,7 @@ export default function App() {
     prevBustSeqRef.current = 0;
     setReviewPlayerId(null);
     setBustInfo(null);
+    setRoundEndInfo(null);
     setGateOpen(false);
     setGame(g);
     setScreen('game');
@@ -68,6 +71,7 @@ export default function App() {
     setGame(null);
     setReviewPlayerId(null);
     setBustInfo(null);
+    setRoundEndInfo(null);
     setScreen('setup');
   }
 
@@ -77,9 +81,15 @@ export default function App() {
     if (!bust) return;
     if (bust.seq !== prevBustSeqRef.current) {
       prevBustSeqRef.current = bust.seq;
-      setBustInfo(bust);
-      if (bustTimerRef.current) clearTimeout(bustTimerRef.current);
-      bustTimerRef.current = setTimeout(() => setBustInfo(null), 1600);
+      if (game.phase === 'gameOver') {
+        // 最後のバースト：フラッシュ演出（このあと結果画面）
+        setBustInfo(bust);
+        if (bustTimerRef.current) clearTimeout(bustTimerRef.current);
+        bustTimerRef.current = setTimeout(() => setBustInfo(null), 1600);
+      } else {
+        // まだ続く：ラウンド終了（手札を配り直して次へ）でいったん区切る
+        setRoundEndInfo(bust);
+      }
     }
   }, [game?.lastBust?.seq]);
 
@@ -97,6 +107,7 @@ export default function App() {
   useEffect(() => {
     if (!game || game.phase !== 'playing') return;
     if (reviewPlayerId) return; // 手札確認の演出中は止める
+    if (roundEndInfo) return; // ラウンド終了の区切り中は止める
     const cur = game.players[game.currentPlayerIndex];
     if (!cur || !cur.isAI || cur.eliminated) return;
 
@@ -114,7 +125,7 @@ export default function App() {
     return () => {
       if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     };
-  }, [game?.turnId, game?.turnPlaysRemaining, game?.phase, reviewPlayerId]);
+  }, [game?.turnId, game?.turnPlaysRemaining, game?.phase, reviewPlayerId, roundEndInfo]);
 
   // --- 手番終了後に「引いたカードの確認」を挟むか判定 ---
   function maybeReview(prev, next, actingId) {
@@ -154,6 +165,9 @@ export default function App() {
   }
   function passHandoff() {
     setReviewPlayerId(null);
+  }
+  function continueRound() {
+    setRoundEndInfo(null);
   }
 
   if (screen === 'setup') {
@@ -203,6 +217,9 @@ export default function App() {
           total={game.total}
           onPass={passHandoff}
         />
+      )}
+      {roundEndInfo && game.phase === 'playing' && (
+        <RoundEndModal bust={roundEndInfo} players={game.players} onContinue={continueRound} />
       )}
       <BustEffect bust={bustInfo} />
       {game?.phase === 'gameOver' && (

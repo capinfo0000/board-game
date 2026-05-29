@@ -809,6 +809,47 @@ button {
   color: #ffe;
 }
 
+/* ラウンド終了画面 */
+.round-boom {
+  font-size: 60px;
+  animation: trophyPop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.round-bust {
+  font-size: 15px;
+  margin: 4px 0 12px;
+}
+.standings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 14px;
+}
+.standing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.standing.out {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+.standing .st-av {
+  font-size: 22px;
+}
+.standing .st-nm {
+  font-weight: 700;
+  flex: 1;
+  text-align: left;
+}
+.standing .st-lives {
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
 /* 勝利演出 */
 .confetti-canvas {
   position: fixed;
