@@ -9,6 +9,8 @@ import NominateModal from './NominateModal.jsx';
 
 export default function GameScreen({
   game,
+  privacy, // true: 覗き見防止あり（複数人）/ false: 常に手札表示
+  viewerId, // privacy=false のとき、常に見せる人間プレイヤーのid
   gateOpen,
   onReveal,
   onPlay,
@@ -26,10 +28,31 @@ export default function GameScreen({
 
   const current = game.players[game.currentPlayerIndex];
   const isHumanTurn = current && !current.isAI && !current.eliminated;
-  const revealed = isHumanTurn && !gateOpen;
+
+  // 画面下部にどのプレイヤーの手札を出すか／表向きか／操作可能か を決める
+  let bottomPlayer;
+  let bottomFaceUp;
+  let bottomSelectable;
+  if (privacy) {
+    const revealed = isHumanTurn && !gateOpen;
+    bottomPlayer = current;
+    bottomFaceUp = revealed;
+    bottomSelectable = revealed;
+  } else {
+    const viewer = viewerId ? game.players.find((p) => p.id === viewerId) : null;
+    if (viewer) {
+      bottomPlayer = viewer;
+      bottomFaceUp = true;
+      bottomSelectable = current?.id === viewer.id && game.phase === 'playing';
+    } else {
+      bottomPlayer = current;
+      bottomFaceUp = false;
+      bottomSelectable = false;
+    }
+  }
 
   function handleCardClick(card) {
-    if (!revealed) return;
+    if (!bottomSelectable) return;
     if (!isPlayable(card, game.total)) return;
     if (card.kind === KIND.NOMINATE) {
       setNominateCardId(card.id);
@@ -50,7 +73,7 @@ export default function GameScreen({
   let banner = null;
   if (current?.isAI) {
     banner = <span>🤖 {current.name} が考えています…</span>;
-  } else if (revealed) {
+  } else if (bottomSelectable) {
     if (game.pendingPlays === 2) {
       banner = (
         <span className="warn">
@@ -60,9 +83,11 @@ export default function GameScreen({
     } else {
       banner = <span>{current.name} の番！カードを選んでね</span>;
     }
+  } else if (!privacy && current && !current.isAI) {
+    banner = <span>{current.name} の番</span>;
   }
 
-  const showHandFaces = revealed;
+  const ultDisabled = !bottomSelectable || !current || current.ultimateUsed;
 
   return (
     <div className="game">
@@ -96,25 +121,27 @@ export default function GameScreen({
         <div className="turn-banner">{banner}</div>
 
         <div className="hand">
-          {showHandFaces
-            ? current.hand.map((card) => (
-                <CardView
-                  key={card.id}
-                  card={card}
-                  playable={isPlayable(card, game.total)}
-                  selectable={isPlayable(card, game.total)}
-                  onClick={() => handleCardClick(card)}
-                />
-              ))
-            : current && !current.eliminated
-            ? current.hand.map((c) => <CardView key={c.id} card={c} faceDown />)
+          {bottomPlayer && !bottomPlayer.eliminated
+            ? bottomPlayer.hand.map((card) =>
+                bottomFaceUp ? (
+                  <CardView
+                    key={card.id}
+                    card={card}
+                    playable={isPlayable(card, game.total)}
+                    selectable={bottomSelectable && isPlayable(card, game.total)}
+                    onClick={() => handleCardClick(card)}
+                  />
+                ) : (
+                  <CardView key={card.id} card={card} faceDown />
+                ),
+              )
             : null}
         </div>
 
         <div className="actions-bar">
           <button
             className="btn"
-            disabled={!revealed || current.ultimateUsed}
+            disabled={ultDisabled}
             onClick={onUltimate}
             title="全員の手札を右回りで総入れ替え（1人1回・手番終了）"
           >
@@ -123,7 +150,7 @@ export default function GameScreen({
         </div>
       </div>
 
-      {gateOpen && isHumanTurn && <PassScreen player={current} onReveal={onReveal} />}
+      {privacy && gateOpen && isHumanTurn && <PassScreen player={current} onReveal={onReveal} />}
 
       {nominateCardId && (
         <NominateModal

@@ -1,17 +1,20 @@
 import React from 'react';
+import Confetti from './Confetti.jsx';
 
 export default function GameOverModal({ winner, onRestart, onHome }) {
   return (
     <div className="overlay">
-      <div className="modal center">
-        <div className="winner-emoji">🏆</div>
-        <h2>ゲーム終了！</h2>
+      <Confetti />
+      <div className="modal center win-modal">
+        <div className="win-rays" aria-hidden />
+        <div className="win-trophy">🏆</div>
+        <h2 className="win-title">勝者決定！</h2>
         {winner ? (
-          <p style={{ fontSize: 18 }}>
-            <span style={{ fontSize: 28 }}>{winner.avatar}</span>
-            <br />
-            <b>{winner.name}</b> の勝利！
-          </p>
+          <div className="win-player">
+            <div className="win-avatar">{winner.avatar}</div>
+            <div className="win-name">{winner.name}</div>
+            <div className="win-sub">🎉 おめでとう！ 最後まで生き残りました 🎉</div>
+          </div>
         ) : (
           <p>勝者なし</p>
         )}

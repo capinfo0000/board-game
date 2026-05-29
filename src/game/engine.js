@@ -82,11 +82,12 @@ function drawCard(state) {
   return state.drawPile.pop();
 }
 
-function refillHand(state, player) {
+function refillHand(state, player, collected) {
   while (player.hand.length < HAND_SIZE) {
     const card = drawCard(state);
     if (!card) break;
     player.hand.push(card);
+    if (collected) collected.push(card.id);
   }
 }
 
@@ -150,6 +151,7 @@ export function createGame(config) {
     phase: 'playing',
     winnerId: null,
     lastAction: null, // { playerId, cardId, kind, text } 直近の手（アニメ用）
+    lastDrawn: [], // 直前のプレイで引いたカードのidリスト（手札確認の演出用）
     turnId: 0, // 手番が新しいプレイヤーに確定するたびに増える（UIのパス＆プレイ用）
     log: [],
   };
@@ -342,8 +344,10 @@ export function playCard(prev, playerId, cardId, choice = null) {
   state.lastAction = { playerId, cardId, kind: card.kind, label: card.label };
   addLog(state, buildPlayLogText(state, player, card, choice));
 
-  // 手札補充
-  refillHand(state, player);
+  // 手札補充（引いたカードを記録）
+  const drawn = [];
+  refillHand(state, player, drawn);
+  state.lastDrawn = drawn;
 
   state.turnPlaysRemaining -= 1;
 
@@ -380,6 +384,7 @@ export function useUltimate(prev, playerId) {
     }
   }
   player.ultimateUsed = true;
+  state.lastDrawn = [];
   state.lastAction = { playerId, kind: 'ultimate' };
   addLog(state, `🌀 ${player.name} が必殺技！ 全員の手札を右回転で総入れ替え（手番終了）`);
 
