@@ -67,11 +67,44 @@ test('AI同士で最後まで進行し勝者が決まる（クラッシュしな
 test('101カードは場を101にする', () => {
   let g = createGame({ players: [{ name: 'A' }, { name: 'B' }] });
   const me = getCurrentPlayer(g);
+  // 相手(B)が必ず出せる札を持つようにして、バースト→リセットで場が0に戻るのを防ぐ
+  g.players[1].hand[0] = { id: 'bpass', kind: KIND.PASS, value: 0, label: 'パス' };
   // 手札に101カードを仕込む
   const card = { id: 'force101', kind: KIND.SET101, value: 0, label: '101' };
   me.hand[0] = card;
   g = playCard(g, me.id, 'force101');
   assert.equal(g.total, LIMIT);
+});
+
+test('次2枚を受けて特殊カードを出すと1枚でOK・2枚出す番は次へ移る', () => {
+  let g = createGame({ players: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] });
+  const a = getCurrentPlayer(g);
+  a.hand[0] = { id: 'd2', kind: KIND.DRAW2, value: 0, label: '次2枚' };
+  g = playCard(g, a.id, 'd2');
+  assert.equal(g.pendingPlays, 2, 'Bは2枚出す番');
+  const bId = getCurrentPlayer(g).id;
+  getCurrentPlayer(g).hand[0] = { id: 'sk', kind: KIND.SKIP, value: 0, label: 'スキップ' };
+  g = playCard(g, bId, 'sk');
+  const bAfter = g.players.find((p) => p.id === bId);
+  assert.equal(bAfter.hand.length, 5, '1枚出して1枚引く＝5枚キープ');
+  assert.equal(g.pendingPlays, 2, '2枚出す義務は次のプレイヤーへ');
+  assert.notEqual(getCurrentPlayer(g).id, bId, 'Bの手番は終わっている');
+});
+
+test('次2枚を受けて数字カードを出すと2枚必要・引けるのは1枚', () => {
+  let g = createGame({ players: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] });
+  const a = getCurrentPlayer(g);
+  a.hand[0] = { id: 'd2', kind: KIND.DRAW2, value: 0, label: '次2枚' };
+  g = playCard(g, a.id, 'd2');
+  const bId = getCurrentPlayer(g).id;
+  const b = getCurrentPlayer(g);
+  b.hand[0] = { id: 'n1', kind: KIND.NUMBER, value: 3, label: '3' };
+  b.hand[1] = { id: 'n2', kind: KIND.NUMBER, value: 4, label: '4' };
+  g = playCard(g, bId, 'n1');
+  assert.equal(getCurrentPlayer(g).id, bId, '1枚目が数字なのでまだBの番');
+  g = playCard(g, bId, 'n2');
+  const bAfter = g.players.find((p) => p.id === bId);
+  assert.equal(bAfter.hand.length, 4, '2枚出して1枚しか引けないので手札-1');
 });
 
 test('リセットカードは場を1にする', () => {

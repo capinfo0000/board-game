@@ -112,6 +112,9 @@ export default function GameScreen({
         <div className="dir">
           順番 {directionArrow(game)} {game.direction === 1 ? '時計回り' : '反時計回り'}
         </div>
+        <div className="deckinfo" title="山札が尽きたら捨て札をシャッフルして山札に戻します">
+          🂠 山札 <b>{game.drawPile.length}</b> 枚 ・ 🗑 捨て札 {game.discardPile.length} 枚
+        </div>
         <div className="lastplay">{game.log.length ? game.log[game.log.length - 1].text : ''}</div>
       </div>
 

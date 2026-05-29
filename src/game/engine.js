@@ -227,7 +227,8 @@ function doBust(state, player) {
 
 function advanceTurn(state) {
   const fx = state.turnEffects;
-  let idx = nextLivingIndex(state.players, state.currentPlayerIndex, state.direction);
+  const fromIndex = state.currentPlayerIndex;
+  let idx = nextLivingIndex(state.players, fromIndex, state.direction);
   // スキップ（追加ホップ）
   for (let k = 0; k < fx.skip; k += 1) {
     idx = nextLivingIndex(state.players, idx, state.direction);
@@ -239,11 +240,14 @@ function advanceTurn(state) {
   }
 
   state.currentPlayerIndex = idx;
-  state.pendingPlays = fx.draw2 ? 2 : 1;
-  state.turnPlaysRemaining = state.pendingPlays;
+  let owe = fx.draw2 ? 2 : 1;
+  // 自分自身には「2枚」を回さない（2人時のスキップ/リバース等で自分に戻る場合）
+  if (owe === 2 && idx === fromIndex) owe = 1;
+  state.pendingPlays = owe;
+  state.turnPlaysRemaining = owe;
   state.turnEffects = freshTurnEffects();
 
-  if (state.pendingPlays === 2) {
+  if (owe === 2) {
     addLog(state, `➕➕ ${getCurrentPlayer(state).name} は2枚出さなければなりません`);
   }
 
@@ -344,15 +348,28 @@ export function playCard(prev, playerId, cardId, choice = null) {
   state.lastAction = { playerId, cardId, kind: card.kind, label: card.label };
   addLog(state, buildPlayLogText(state, player, card, choice));
 
-  // 手札補充（引いたカードを記録）
-  const drawn = [];
-  refillHand(state, player, drawn);
-  state.lastDrawn = drawn;
+  // --- 「次の人2枚」を受けたターンの処理 ---
+  // turnPlaysRemaining === 2 は「強制2枚ターンの1枚目」を意味する
+  const valueCard =
+    card.kind === KIND.NUMBER || card.kind === KIND.MINUS || card.kind === KIND.SET101;
 
-  state.turnPlaysRemaining -= 1;
+  if (state.turnPlaysRemaining === 2) {
+    if (!valueCard) {
+      // 特殊カード（スキップ・リバース・リセット・パス・指名・次2枚）なら1枚でOK
+      // → 「2枚出す」義務は次のプレイヤーへ移る
+      state.turnEffects.draw2 = true;
+      state.turnPlaysRemaining = 0;
+      addLog(state, '→ 特殊カードのため1枚でOK。2枚出す番は次の人へ');
+    } else {
+      // 数字・±・101 は、もう1枚出す必要がある
+      state.turnPlaysRemaining = 1;
+    }
+  } else {
+    state.turnPlaysRemaining -= 1;
+  }
 
   if (state.turnPlaysRemaining > 0) {
-    // まだ出す必要がある（次の人2枚）。出せなければバースト
+    // 2枚目を出す必要がある（※ここでは補充しない＝2枚出して引けるのは1枚）
     const playable = getPlayableCards(player, state.total);
     if (playable.length === 0) {
       doBust(state, player);
@@ -360,7 +377,15 @@ export function playCard(prev, playerId, cardId, choice = null) {
     return state; // 同じプレイヤーが続けて出す
   }
 
-  // 手番終了
+  // 手番終了：このターンに引けるのは1枚だけ
+  const drawn = [];
+  const newCard = drawCard(state);
+  if (newCard) {
+    player.hand.push(newCard);
+    drawn.push(newCard.id);
+  }
+  state.lastDrawn = drawn;
+
   advanceTurn(state);
   return state;
 }
