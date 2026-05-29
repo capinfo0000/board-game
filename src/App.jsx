@@ -5,12 +5,28 @@ import SetupScreen from './components/SetupScreen.jsx';
 import GameScreen from './components/GameScreen.jsx';
 import GameOverModal from './components/GameOverModal.jsx';
 import HelpModal from './components/HelpModal.jsx';
+import HandoffReview from './components/HandoffReview.jsx';
+
+// 生存している人間プレイヤー
+function livingHumans(g) {
+  return g.players.filter((p) => !p.isAI && !p.eliminated);
+}
+// 覗き見防止が必要か（同一端末で人間が2人以上）
+function needsPrivacy(g) {
+  return livingHumans(g).length >= 2;
+}
+// 常に手札を見せる人間プレイヤーのid（人間が1人以下のとき）
+function soloViewerId(g) {
+  const humans = livingHumans(g);
+  return humans.length ? humans[0].id : null;
+}
 
 export default function App() {
   const [screen, setScreen] = useState('setup'); // 'setup' | 'game'
   const [seats, setSeats] = useState(null);
   const [game, setGame] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
+  const [reviewPlayerId, setReviewPlayerId] = useState(null); // 手札確認中の（直前に出した）人間
   const [showHelp, setShowHelp] = useState(false);
 
   const prevTurnRef = useRef(-1);
@@ -21,6 +37,8 @@ export default function App() {
     setSeats(seatConfig);
     const g = createGame({ players: seatConfig });
     prevTurnRef.current = -1;
+    setReviewPlayerId(null);
+    setGateOpen(false);
     setGame(g);
     setScreen('game');
   }
@@ -32,31 +50,31 @@ export default function App() {
   function goHome() {
     if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     setGame(null);
+    setReviewPlayerId(null);
     setScreen('setup');
   }
 
-  // --- 新しい手番になったら、人間なら覗き見防止ゲートを開く ---
+  // --- 新しい手番になったら、人間かつ覗き見防止が必要ならゲートを開く ---
   useEffect(() => {
     if (!game || game.phase !== 'playing') return;
     if (game.turnId !== prevTurnRef.current) {
       prevTurnRef.current = game.turnId;
       const cur = game.players[game.currentPlayerIndex];
-      // 人間の新しい手番 → ゲート表示（前の人の手札を隠す）
-      setGateOpen(cur && !cur.isAI && !cur.eliminated);
+      setGateOpen(needsPrivacy(game) && cur && !cur.isAI && !cur.eliminated);
     }
   }, [game]);
 
-  // --- AIの自動プレイ ---
+  // --- AIの自動プレイ（手札確認中は待機）---
   useEffect(() => {
     if (!game || game.phase !== 'playing') return;
+    if (reviewPlayerId) return; // 手札確認の演出中は止める
     const cur = game.players[game.currentPlayerIndex];
     if (!cur || !cur.isAI || cur.eliminated) return;
 
-    // 思考の「間」を演出（難易度や状況で少し変える）
     const delay = 700 + Math.random() * 700;
     aiTimerRef.current = setTimeout(() => {
       const move = chooseMove(game);
-      if (!move) return; // 出せない場合はエンジンが自動処理済み
+      if (!move) return;
       if (move.type === 'ultimate') {
         setGame((g) => useUltimate(g, cur.id));
       } else {
@@ -67,18 +85,46 @@ export default function App() {
     return () => {
       if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     };
-    // turnId と残り枚数の両方を見て、2枚出し（次の人2枚）にも対応
-  }, [game?.turnId, game?.turnPlaysRemaining, game?.phase]);
+  }, [game?.turnId, game?.turnPlaysRemaining, game?.phase, reviewPlayerId]);
+
+  // --- 手番終了後に「引いたカードの確認」を挟むか判定 ---
+  function maybeReview(prev, next, actingId) {
+    const turnEnded = next.turnId !== prev.turnId;
+    const acting = next.players.find((p) => p.id === actingId);
+    const bustHappened = next.players.some(
+      (p, i) => p.lives < prev.players[i].lives,
+    );
+    if (
+      turnEnded &&
+      next.phase === 'playing' &&
+      needsPrivacy(next) &&
+      acting &&
+      !acting.isAI &&
+      !acting.eliminated &&
+      !bustHappened
+    ) {
+      setReviewPlayerId(actingId);
+    }
+  }
 
   // --- 人間の操作 ---
   function handlePlay(cardId, choice) {
-    setGame((g) => playCard(g, g.players[g.currentPlayerIndex].id, cardId, choice ?? null));
+    const actingId = game.players[game.currentPlayerIndex].id;
+    const next = playCard(game, actingId, cardId, choice ?? null);
+    setGame(next);
+    maybeReview(game, next, actingId);
   }
   function handleUltimate() {
-    setGame((g) => useUltimate(g, g.players[g.currentPlayerIndex].id));
+    const actingId = game.players[game.currentPlayerIndex].id;
+    const next = useUltimate(game, actingId);
+    setGame(next);
+    maybeReview(game, next, actingId);
   }
   function reveal() {
     setGateOpen(false);
+  }
+  function passHandoff() {
+    setReviewPlayerId(null);
   }
 
   if (screen === 'setup') {
@@ -95,11 +141,18 @@ export default function App() {
   }
 
   const winner = game?.winnerId ? game.players.find((p) => p.id === game.winnerId) : null;
+  const privacy = game ? needsPrivacy(game) : false;
+  const viewerId = game && !privacy ? soloViewerId(game) : null;
+  const reviewPlayer = reviewPlayerId
+    ? game.players.find((p) => p.id === reviewPlayerId)
+    : null;
 
   return (
     <div className="app">
       <GameScreen
         game={game}
+        privacy={privacy}
+        viewerId={viewerId}
         gateOpen={gateOpen}
         onReveal={reveal}
         onPlay={handlePlay}
@@ -107,6 +160,14 @@ export default function App() {
         onOpenHelp={() => setShowHelp(true)}
         onHome={goHome}
       />
+      {reviewPlayer && game.phase === 'playing' && (
+        <HandoffReview
+          player={reviewPlayer}
+          lastDrawn={game.lastDrawn}
+          total={game.total}
+          onPass={passHandoff}
+        />
+      )}
       {game?.phase === 'gameOver' && (
         <GameOverModal winner={winner} onRestart={restart} onHome={goHome} />
       )}
