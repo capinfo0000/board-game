@@ -504,7 +504,7 @@ button {
 .pass-screen {
   text-align: center;
 }
-.pass-screen .big-av {
+.big-av {
   font-size: 72px;
 }
 .pass-screen .who {
@@ -514,7 +514,67 @@ button {
 }
 .pass-screen .hint {
   color: var(--muted);
-  margin-bottom: 18px;
+  margin: 6px 0 16px;
+}
+
+/* 手札確認（受け渡し）画面 */
+.handoff-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 52;
+  background: rgba(8, 12, 24, 0.92);
+  backdrop-filter: blur(4px);
+  display: flex;
+}
+.handoff-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px 92px 16px 16px; /* 右に横ボタン分のスペース */
+}
+.handoff-body .who {
+  font-size: 22px;
+  font-weight: 900;
+  margin: 4px 0;
+}
+.handoff-body .hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0 12px;
+}
+.handoff-hand {
+  justify-content: center;
+  max-width: 100%;
+}
+/* 画面横（右端）の「渡す」ボタン */
+.side-pass {
+  position: fixed;
+  right: 10px;
+  top: 14px;
+  bottom: 14px;
+  width: 72px;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px;
+  z-index: 53;
+}
+.side-pass-label {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 3px;
+}
+.side-pass-arrow {
+  font-size: 22px;
 }
 
 .nominate-list,
