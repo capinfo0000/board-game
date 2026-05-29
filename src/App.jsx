@@ -27,6 +27,7 @@ export default function App() {
   const [seats, setSeats] = useState(null);
   const [lives, setLives] = useState(3); // 初期ライフ設定（1〜3）
   const [handSize, setHandSize] = useState(5); // 手札枚数（3〜5）
+  const [mode, setMode] = useState('loser'); // 'loser'=ひとり負け / 'winner'=ひとり勝ち
   const [game, setGame] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
   const [reviewPlayerId, setReviewPlayerId] = useState(null); // 手札確認中の（直前に出した）人間
@@ -39,13 +40,15 @@ export default function App() {
   const bustTimerRef = useRef(null);
 
   // --- ゲーム開始 ---
-  function startGame(seatConfig, livesSetting, handSizeSetting) {
+  function startGame(seatConfig, livesSetting, handSizeSetting, modeSetting) {
     const lv = livesSetting ?? lives;
     const hs = handSizeSetting ?? handSize;
+    const md = modeSetting ?? mode;
     setSeats(seatConfig);
     setLives(lv);
     setHandSize(hs);
-    const g = createGame({ players: seatConfig, lives: lv, handSize: hs });
+    setMode(md);
+    const g = createGame({ players: seatConfig, lives: lv, handSize: hs, mode: md });
     prevTurnRef.current = -1;
     prevBustSeqRef.current = 0;
     setReviewPlayerId(null);
@@ -56,7 +59,7 @@ export default function App() {
   }
 
   function restart() {
-    if (seats) startGame(seats, lives, handSize);
+    if (seats) startGame(seats, lives, handSize, mode);
   }
 
   function goHome() {
@@ -162,6 +165,7 @@ export default function App() {
           initialSeats={seats}
           initialLives={lives}
           initialHandSize={handSize}
+          initialMode={mode}
         />
         {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
       </div>
@@ -169,7 +173,10 @@ export default function App() {
   }
 
   const loser = game?.loserId ? game.players.find((p) => p.id === game.loserId) : null;
-  const winners = game?.loserId ? game.players.filter((p) => p.id !== game.loserId) : [];
+  const winner = game?.winnerId ? game.players.find((p) => p.id === game.winnerId) : null;
+  const others = game
+    ? game.players.filter((p) => p.id !== game.loserId && p.id !== game.winnerId)
+    : [];
   const privacy = game ? needsPrivacy(game) : false;
   const viewerId = game && !privacy ? soloViewerId(game) : null;
   const reviewPlayer = reviewPlayerId
@@ -199,7 +206,14 @@ export default function App() {
       )}
       <BustEffect bust={bustInfo} />
       {game?.phase === 'gameOver' && (
-        <GameOverModal loser={loser} winners={winners} onRestart={restart} onHome={goHome} />
+        <GameOverModal
+          mode={game.mode}
+          winner={winner}
+          loser={loser}
+          others={others}
+          onRestart={restart}
+          onHome={goHome}
+        />
       )}
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </div>

@@ -20,12 +20,14 @@ export default function SetupScreen({
   initialSeats,
   initialLives,
   initialHandSize,
+  initialMode,
 }) {
   const [seats, setSeats] = useState(
     initialSeats || [makeSeat(0, false), makeSeat(1, true)],
   );
   const [lives, setLives] = useState(initialLives || 3);
   const [handSize, setHandSize] = useState(initialHandSize || 5);
+  const [mode, setMode] = useState(initialMode || 'loser');
   const [avatarPickerFor, setAvatarPickerFor] = useState(null);
 
   function update(i, patch) {
@@ -131,6 +133,26 @@ export default function SetupScreen({
       </div>
 
       <div className="card-panel">
+        <h2 style={{ marginTop: 0 }}>勝敗の決め方</h2>
+        <div className="mode-toggle">
+          <button
+            className={`mode-btn${mode === 'loser' ? ' on' : ''}`}
+            onClick={() => setMode('loser')}
+          >
+            😵 ひとり負け
+            <span className="mode-desc">最初に脱落した人の負け（残りは全員勝ち）</span>
+          </button>
+          <button
+            className={`mode-btn${mode === 'winner' ? ' on' : ''}`}
+            onClick={() => setMode('winner')}
+          >
+            🏆 ひとり勝ち
+            <span className="mode-desc">最後まで生き残った1人が優勝</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="card-panel">
         <div className="row between">
           <h2 style={{ margin: 0 }}>ライフ（チップ）</h2>
           <div className="kind-toggle">
@@ -146,7 +168,7 @@ export default function SetupScreen({
           </div>
         </div>
         <p className="small-muted" style={{ marginBottom: 0 }}>
-          最初にライフが0になった人が「ひとり負け」。負けが決まったら終了です。
+          バーストするとライフが1減り、0になると脱落します。
         </p>
       </div>
 
@@ -175,7 +197,7 @@ export default function SetupScreen({
           className="btn primary"
           style={{ width: '100%', fontSize: 18 }}
           disabled={!canStart}
-          onClick={() => onStart(seats, lives, handSize)}
+          onClick={() => onStart(seats, lives, handSize, mode)}
         >
           ゲーム開始 ▶
         </button>

@@ -67,6 +67,30 @@ test('AI同士で最後まで進行し勝者が決まる（クラッシュしな
   }
 });
 
+test('ひとり勝ちモードでは最後の1人が決まるまで続く', () => {
+  for (let trial = 0; trial < 10; trial += 1) {
+    let g = createGame({
+      players: [
+        { name: 'A', isAI: true, difficulty: 'easy' },
+        { name: 'B', isAI: true, difficulty: 'normal' },
+        { name: 'C', isAI: true, difficulty: 'hard' },
+      ],
+      lives: 2,
+      mode: 'winner',
+    });
+    let steps = 0;
+    while (g.phase === 'playing' && steps < 5000) {
+      steps += 1;
+      const move = chooseMove(g);
+      const me = getCurrentPlayer(g);
+      g = move.type === 'ultimate' ? useUltimate(g, me.id) : playCard(g, me.id, move.cardId, move.choice ?? null);
+    }
+    assert.equal(g.phase, 'gameOver');
+    assert.ok(g.winnerId, 'ひとり勝ちが決まる');
+    assert.equal(g.players.filter((p) => !p.eliminated).length, 1, '生存者は1人');
+  }
+});
+
 test('手札枚数は設定できる（3枚）', () => {
   const g = createGame({ players: [{ name: 'A' }, { name: 'B' }], handSize: 3 });
   for (const p of g.players) assert.equal(p.hand.length, 3);

@@ -153,7 +153,9 @@ export function createGame(config) {
     turnPlaysRemaining: 1,
     turnEffects: freshTurnEffects(),
     phase: 'playing',
+    mode: config.mode === 'winner' ? 'winner' : 'loser', // 'loser'=ひとり負け / 'winner'=ひとり勝ち
     loserId: null, // ひとり負けが決まったプレイヤー
+    winnerId: null, // ひとり勝ちが決まったプレイヤー
     lastAction: null, // { playerId, cardId, kind, text } 直近の手（アニメ用）
     lastBust: null, // { seq, name, total, eliminated, ... } バースト演出用
     lastDrawn: [], // 直前のプレイで引いたカードのidリスト（手札確認の演出用）
@@ -217,17 +219,34 @@ function doBust(state, player) {
     livesLeft: Math.max(player.lives, 0),
   };
 
-  // ライフが0になったら「ひとり負け」決定＝ゲーム終了
   if (eliminated) {
     player.lives = 0;
     player.eliminated = true;
-    state.phase = 'gameOver';
-    state.loserId = player.id;
-    addLog(state, `😵 ${player.name} のひとり負け！ ゲーム終了`);
+
+    if (state.mode === 'loser') {
+      // ひとり負け：最初にライフ0になった人が敗者で即終了
+      state.phase = 'gameOver';
+      state.loserId = player.id;
+      addLog(state, `😵 ${player.name} のひとり負け！ ゲーム終了`);
+      return;
+    }
+
+    // ひとり勝ち：脱落させて続行。最後の1人が勝ち
+    addLog(state, `☠️ ${player.name} は脱落しました`);
+    const living = livingPlayers(state);
+    if (living.length <= 1) {
+      state.phase = 'gameOver';
+      state.winnerId = living[0]?.id ?? null;
+      if (living[0]) addLog(state, `🏆 ${living[0].name} の勝利！`);
+      return;
+    }
+    // 次の親は脱落者の次の生存者
+    addLog(state, '🔄 手札を配り直して次のラウンドへ');
+    startRound(state, nextLivingIndex(state.players, bustedIndex, 1));
     return;
   }
 
-  // まだ負けではない → 手札を配り直して次ラウンド（バーストした人が次の親）
+  // まだ脱落していない → 手札を配り直して次ラウンド（バーストした人が次の親）
   addLog(state, '🔄 手札を配り直して次のラウンドへ');
   startRound(state, bustedIndex);
 }
