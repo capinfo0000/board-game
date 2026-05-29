@@ -26,6 +26,7 @@ export default function App() {
   const [screen, setScreen] = useState('setup'); // 'setup' | 'game'
   const [seats, setSeats] = useState(null);
   const [lives, setLives] = useState(3); // 初期ライフ設定（1〜3）
+  const [handSize, setHandSize] = useState(5); // 手札枚数（3〜5）
   const [game, setGame] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
   const [reviewPlayerId, setReviewPlayerId] = useState(null); // 手札確認中の（直前に出した）人間
@@ -38,11 +39,13 @@ export default function App() {
   const bustTimerRef = useRef(null);
 
   // --- ゲーム開始 ---
-  function startGame(seatConfig, livesSetting) {
+  function startGame(seatConfig, livesSetting, handSizeSetting) {
     const lv = livesSetting ?? lives;
+    const hs = handSizeSetting ?? handSize;
     setSeats(seatConfig);
     setLives(lv);
-    const g = createGame({ players: seatConfig, lives: lv });
+    setHandSize(hs);
+    const g = createGame({ players: seatConfig, lives: lv, handSize: hs });
     prevTurnRef.current = -1;
     prevBustSeqRef.current = 0;
     setReviewPlayerId(null);
@@ -53,7 +56,7 @@ export default function App() {
   }
 
   function restart() {
-    if (seats) startGame(seats, lives);
+    if (seats) startGame(seats, lives, handSize);
   }
 
   function goHome() {
@@ -158,13 +161,15 @@ export default function App() {
           onOpenHelp={() => setShowHelp(true)}
           initialSeats={seats}
           initialLives={lives}
+          initialHandSize={handSize}
         />
         {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
       </div>
     );
   }
 
-  const winner = game?.winnerId ? game.players.find((p) => p.id === game.winnerId) : null;
+  const loser = game?.loserId ? game.players.find((p) => p.id === game.loserId) : null;
+  const winners = game?.loserId ? game.players.filter((p) => p.id !== game.loserId) : [];
   const privacy = game ? needsPrivacy(game) : false;
   const viewerId = game && !privacy ? soloViewerId(game) : null;
   const reviewPlayer = reviewPlayerId
@@ -194,7 +199,7 @@ export default function App() {
       )}
       <BustEffect bust={bustInfo} />
       {game?.phase === 'gameOver' && (
-        <GameOverModal winner={winner} onRestart={restart} onHome={goHome} />
+        <GameOverModal loser={loser} winners={winners} onRestart={restart} onHome={goHome} />
       )}
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </div>

@@ -84,7 +84,8 @@ function drawCard(state) {
 }
 
 function refillHand(state, player, collected) {
-  while (player.hand.length < HAND_SIZE) {
+  const target = state.handSize ?? HAND_SIZE;
+  while (player.hand.length < target) {
     const card = drawCard(state);
     if (!card) break;
     player.hand.push(card);
@@ -142,6 +143,7 @@ export function createGame(config) {
 
   const state = {
     players,
+    handSize: config.handSize ?? HAND_SIZE,
     drawPile: deck,
     discardPile: [],
     total: 0,
@@ -151,7 +153,7 @@ export function createGame(config) {
     turnPlaysRemaining: 1,
     turnEffects: freshTurnEffects(),
     phase: 'playing',
-    winnerId: null,
+    loserId: null, // ひとり負けが決まったプレイヤー
     lastAction: null, // { playerId, cardId, kind, text } 直近の手（アニメ用）
     lastBust: null, // { seq, name, total, eliminated, ... } バースト演出用
     lastDrawn: [], // 直前のプレイで引いたカードのidリスト（手札確認の演出用）
@@ -201,12 +203,7 @@ function doBust(state, player) {
   addLog(state, `💥 ${player.name} は出せる札がなく合計${bustTotal}でバースト！ ライフ -1（残り${Math.max(player.lives, 0)}）`);
 
   const bustedIndex = state.players.indexOf(player);
-
-  if (player.lives <= 0) {
-    player.eliminated = true;
-    player.lives = 0;
-    addLog(state, `☠️ ${player.name} は脱落しました`);
-  }
+  const eliminated = player.lives <= 0;
 
   // バースト演出用のイベント
   _bustSeq += 1;
@@ -216,27 +213,23 @@ function doBust(state, player) {
     name: player.name,
     avatar: player.avatar,
     total: bustTotal,
-    eliminated: player.eliminated,
-    livesLeft: player.lives,
+    eliminated,
+    livesLeft: Math.max(player.lives, 0),
   };
 
-  const living = livingPlayers(state);
-  if (living.length <= 1) {
+  // ライフが0になったら「ひとり負け」決定＝ゲーム終了
+  if (eliminated) {
+    player.lives = 0;
+    player.eliminated = true;
     state.phase = 'gameOver';
-    state.winnerId = living[0]?.id ?? null;
-    if (living[0]) addLog(state, `🏆 ${living[0].name} の勝利！`);
+    state.loserId = player.id;
+    addLog(state, `😵 ${player.name} のひとり負け！ ゲーム終了`);
     return;
   }
 
-  // 次の親を決める：脱落していなければ本人、脱落したら次の生存者
-  let starter;
-  if (!player.eliminated) {
-    starter = bustedIndex;
-  } else {
-    starter = nextLivingIndex(state.players, bustedIndex, 1);
-  }
+  // まだ負けではない → 手札を配り直して次ラウンド（バーストした人が次の親）
   addLog(state, '🔄 手札を配り直して次のラウンドへ');
-  startRound(state, starter);
+  startRound(state, bustedIndex);
 }
 
 // ---- 手番終了 → 次のプレイヤーへ ----
@@ -427,7 +420,7 @@ export function useUltimate(prev, playerId) {
   player.ultimateUsed = true;
   state.lastDrawn = [];
   state.lastAction = { playerId, kind: 'ultimate' };
-  addLog(state, `🌀 ${player.name} が必殺技！ 全員の手札を右回転で総入れ替え（手番終了）`);
+  addLog(state, `🔄 ${player.name} が手札まわし！ 全員の手札を右どなりへ回す（手番終了）`);
 
   // 発動したら手番終了
   advanceTurn(state);

@@ -14,11 +14,18 @@ function makeSeat(i, isAI) {
   };
 }
 
-export default function SetupScreen({ onStart, onOpenHelp, initialSeats, initialLives }) {
+export default function SetupScreen({
+  onStart,
+  onOpenHelp,
+  initialSeats,
+  initialLives,
+  initialHandSize,
+}) {
   const [seats, setSeats] = useState(
     initialSeats || [makeSeat(0, false), makeSeat(1, true)],
   );
   const [lives, setLives] = useState(initialLives || 3);
+  const [handSize, setHandSize] = useState(initialHandSize || 5);
   const [avatarPickerFor, setAvatarPickerFor] = useState(null);
 
   function update(i, patch) {
@@ -139,8 +146,25 @@ export default function SetupScreen({ onStart, onOpenHelp, initialSeats, initial
           </div>
         </div>
         <p className="small-muted" style={{ marginBottom: 0 }}>
-          ライフが0になると脱落。最後の1人が勝ちです。
+          最初にライフが0になった人が「ひとり負け」。負けが決まったら終了です。
         </p>
+      </div>
+
+      <div className="card-panel">
+        <div className="row between">
+          <h2 style={{ margin: 0 }}>手札の枚数</h2>
+          <div className="kind-toggle">
+            {[3, 4, 5].map((n) => (
+              <button
+                key={n}
+                className={`chip${handSize === n ? ' on' : ''}`}
+                onClick={() => setHandSize(n)}
+              >
+                {n}枚
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="card-panel center">
@@ -151,7 +175,7 @@ export default function SetupScreen({ onStart, onOpenHelp, initialSeats, initial
           className="btn primary"
           style={{ width: '100%', fontSize: 18 }}
           disabled={!canStart}
-          onClick={() => onStart(seats, lives)}
+          onClick={() => onStart(seats, lives, handSize)}
         >
           ゲーム開始 ▶
         </button>

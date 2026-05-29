@@ -17,7 +17,7 @@ export default function PlayerSeats({ players, currentIndex }) {
           }`}
         >
           {!p.eliminated && <span className="cardcount">{p.hand.length}</span>}
-          {!p.ultimateUsed && !p.eliminated && <span className="ult" title="必殺技 未使用">🌀</span>}
+          {!p.ultimateUsed && !p.eliminated && <span className="ult" title="手札まわし 未使用">🔄</span>}
           <div className="av">{p.avatar}</div>
           <div className="nm">{p.name}</div>
           <Hearts n={p.lives} />

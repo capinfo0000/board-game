@@ -1,23 +1,39 @@
 import React from 'react';
 import Confetti from './Confetti.jsx';
 
-export default function GameOverModal({ winner, onRestart, onHome }) {
+export default function GameOverModal({ loser, winners, onRestart, onHome }) {
   return (
     <div className="overlay">
       <Confetti />
       <div className="modal center win-modal">
         <div className="win-rays" aria-hidden />
-        <div className="win-trophy">🏆</div>
-        <h2 className="win-title">勝者決定！</h2>
-        {winner ? (
-          <div className="win-player">
-            <div className="win-avatar">{winner.avatar}</div>
-            <div className="win-name">{winner.name}</div>
-            <div className="win-sub">🎉 おめでとう！ 最後まで生き残りました 🎉</div>
+        <h2 className="win-title">ゲーム終了！</h2>
+
+        {loser ? (
+          <div className="lose-player">
+            <div className="lose-stamp">ひとり負け</div>
+            <div className="lose-avatar">{loser.avatar}</div>
+            <div className="lose-name">{loser.name}</div>
+            <div className="lose-sub">😵 ライフが尽きました…</div>
           </div>
         ) : (
-          <p>勝者なし</p>
+          <p>勝敗なし</p>
         )}
+
+        {winners && winners.length > 0 && (
+          <div className="winners-row">
+            <div className="winners-label">🎉 のこりはみんな勝ち 🎉</div>
+            <div className="winners-list">
+              {winners.map((w) => (
+                <div key={w.id} className="winner-chip">
+                  <span className="wc-av">{w.avatar}</span>
+                  <span className="wc-nm">{w.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="actions-bar mt">
           <button className="btn primary" onClick={onRestart}>
             もう一度（同じメンバー）

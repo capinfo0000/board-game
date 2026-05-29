@@ -1,7 +1,7 @@
 // エンジンの動作確認（node --test で実行）
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, playCard, useUltimate, getCurrentPlayer, livingPlayers, isPlayable } from './engine.js';
+import { createGame, playCard, useUltimate, getCurrentPlayer, isPlayable } from './engine.js';
 import { chooseMove } from './ai.js';
 import { buildDeck } from './cards.js';
 import { LIMIT, KIND } from './constants.js';
@@ -59,9 +59,32 @@ test('AI同士で最後まで進行し勝者が決まる（クラッシュしな
       assert.ok(g.total >= 0 && g.total <= LIMIT, `total範囲: ${g.total}`);
     }
     assert.equal(g.phase, 'gameOver', `trial${trial}: ${steps}手で終了しなかった`);
-    assert.equal(livingPlayers(g).length, 1);
-    assert.ok(g.winnerId);
+    // ひとり負けを決めるゲーム：最初に脱落した1人が敗者で即終了
+    assert.ok(g.loserId, '敗者が決まる');
+    const eliminated = g.players.filter((p) => p.eliminated);
+    assert.equal(eliminated.length, 1, '脱落者はちょうど1人');
+    assert.equal(eliminated[0].id, g.loserId);
   }
+});
+
+test('手札枚数は設定できる（3枚）', () => {
+  const g = createGame({ players: [{ name: 'A' }, { name: 'B' }], handSize: 3 });
+  for (const p of g.players) assert.equal(p.hand.length, 3);
+});
+
+test('ライフ1なら最初のバーストで即ひとり負け', () => {
+  let g = createGame({ players: [{ name: 'A' }, { name: 'B' }], lives: 1 });
+  const cur = getCurrentPlayer(g); // A
+  cur.hand[0] = { id: 's101', kind: KIND.SET101, value: 0, label: '101' };
+  // Bの手札を全て「出せない数字」にする（場101では+1以上は不可）
+  const b = g.players[1];
+  for (let i = 0; i < b.hand.length; i += 1) {
+    b.hand[i] = { id: `bn${i}`, kind: KIND.NUMBER, value: 5, label: '5' };
+  }
+  // Aが101を出す→場101→Bの番→Bは出せず即バースト→ライフ0→ひとり負け
+  g = playCard(g, cur.id, 's101');
+  assert.equal(g.phase, 'gameOver');
+  assert.equal(g.loserId, b.id);
 });
 
 test('101カードは場を101にする', () => {

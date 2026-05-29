@@ -146,9 +146,9 @@ export default function GameScreen({
             className="btn"
             disabled={ultDisabled}
             onClick={onUltimate}
-            title="全員の手札を右回りで総入れ替え（1人1回・手番終了）"
+            title="全員の手札を右どなりへ回す（1人1回・使うと手番終了）"
           >
-            🌀 必殺技{current && current.ultimateUsed ? '（使用済）' : ''}
+            🔄 手札まわし{current && current.ultimateUsed ? '（使用済）' : ''}
           </button>
         </div>
       </div>
