@@ -17,6 +17,7 @@ function makeSeat(i, isAI) {
 export default function SetupScreen({
   onStart,
   onOpenHelp,
+  onOnline,
   initialSeats,
   initialLives,
   initialHandSize,
@@ -203,9 +204,14 @@ export default function SetupScreen({
         </button>
       </div>
 
-      <p className="center small-muted" style={{ marginTop: 16 }}>
-        🌐 オンライン対戦（ルームコード）は次のアップデートで追加予定
-      </p>
+      <div className="card-panel center">
+        <button className="btn" style={{ width: '100%' }} onClick={onOnline}>
+          🌐 オンライン対戦（ルームコード）
+        </button>
+        <p className="small-muted" style={{ marginBottom: 0 }}>
+          別々の端末で対戦。ホストが部屋を作り、コードを共有します。
+        </p>
+      </div>
     </div>
   );
 }

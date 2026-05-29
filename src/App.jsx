@@ -8,6 +8,7 @@ import HelpModal from './components/HelpModal.jsx';
 import HandoffReview from './components/HandoffReview.jsx';
 import BustEffect from './components/BustEffect.jsx';
 import RoundEndModal from './components/RoundEndModal.jsx';
+import OnlineGame from './components/OnlineGame.jsx';
 
 // 生存している人間プレイヤー
 function livingHumans(g) {
@@ -24,7 +25,7 @@ function soloViewerId(g) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState('setup'); // 'setup' | 'game'
+  const [screen, setScreen] = useState('setup'); // 'setup' | 'game' | 'online'
   const [seats, setSeats] = useState(null);
   const [lives, setLives] = useState(1); // 初期ライフ設定（1〜3）
   const [handSize, setHandSize] = useState(3); // 手札枚数（3〜5）
@@ -170,12 +171,17 @@ export default function App() {
     setRoundEndInfo(null);
   }
 
+  if (screen === 'online') {
+    return <OnlineGame onExit={() => setScreen('setup')} />;
+  }
+
   if (screen === 'setup') {
     return (
       <div className="app">
         <SetupScreen
           onStart={startGame}
           onOpenHelp={() => setShowHelp(true)}
+          onOnline={() => setScreen('online')}
           initialSeats={seats}
           initialLives={lives}
           initialHandSize={handSize}
