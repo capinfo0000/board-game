@@ -13,7 +13,7 @@ export default function NominateModal({ players, selfId, onPick, onCancel, title
               <span style={{ fontSize: 24 }}>{p.avatar}</span>
               <span style={{ fontWeight: 700 }}>{p.name}</span>
               <span className="small-muted" style={{ marginLeft: 'auto' }}>
-                {'❤️'.repeat(p.lives)}
+                🂠 {p.hand.length}枚 ・ {'❤️'.repeat(p.lives)}
               </span>
             </button>
           ))}
