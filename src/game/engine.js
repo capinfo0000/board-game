@@ -188,12 +188,13 @@ function settleTurnStart(state) {
       continue;
     }
     const playable = getPlayableCards(player, state.total);
-    if (playable.length === 0) {
-      // 出せる札がない → バースト
+    if (playable.length === 0 && player.ultimateUsed) {
+      // 出せる札がなく、手札まわしも使い切っている → バースト
       doBust(state, player);
       // doBust が startRound を呼ぶ場合があり、その中で再度 settleTurnStart が走る
       return;
     }
+    // 出せる札が無くても、手札まわしが残っていれば手番は成立（使うか/バーストかを選ぶ）
     state.turnId += 1; // 新しいプレイヤーの手番が確定
     break; // 出せる札がある＝手番確定
   }
@@ -399,9 +400,10 @@ export function playCard(prev, playerId, cardId, choice = null) {
   if (state.turnPlaysRemaining > 0) {
     // 2枚目を出す必要がある（※ここでは補充しない＝2枚出して引けるのは1枚）
     const playable = getPlayableCards(player, state.total);
-    if (playable.length === 0) {
+    if (playable.length === 0 && player.ultimateUsed) {
       doBust(state, player);
     }
+    // 手札まわしが残っていればバーストせず、本人が使うか/バーストかを選ぶ
     return state; // 同じプレイヤーが続けて出す
   }
 
@@ -415,6 +417,18 @@ export function playCard(prev, playerId, cardId, choice = null) {
   state.lastDrawn = drawn;
 
   advanceTurn(state);
+  return state;
+}
+
+// ---- 公開アクション：手札まわしを使わずにバースト（投了）----
+export function forfeit(prev, playerId) {
+  const state = clone(prev);
+  if (state.phase !== 'playing') return prev;
+  const player = getCurrentPlayer(state);
+  if (!player || player.id !== playerId) return prev;
+  // 出せる札があるなら投了はできない（詰んでいる時だけ）
+  if (getPlayableCards(player, state.total).length > 0) return prev;
+  doBust(state, player);
   return state;
 }
 

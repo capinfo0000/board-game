@@ -85,7 +85,7 @@ export default function SetupScreen({
                 className={`chip${seat.isAI ? ' on' : ''}`}
                 onClick={() => update(i, { isAI: true })}
               >
-                AI
+                CPU
               </button>
             </div>
             {seat.isAI && (
@@ -192,7 +192,7 @@ export default function SetupScreen({
 
       <div className="card-panel center">
         <p className="small-muted" style={{ marginTop: 0 }}>
-          同じ端末で順番に回して遊びます（覗き見防止つき）。AIを混ぜてもOK。
+          同じ端末で順番に回して遊びます（覗き見防止つき）。CPUを混ぜてもOK。
         </p>
         <button
           className="btn primary"

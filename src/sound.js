@@ -55,6 +55,28 @@ function blip(freq, dur, type, gain) {
 }
 
 // 読み上げ（Web Speech API）。効果音と同じON/OFFに連動。
+let _speaking = false;
+const speakListeners = new Set();
+let speakFallback = null;
+function setSpeaking(v) {
+  if (_speaking === v) return;
+  _speaking = v;
+  speakListeners.forEach((f) => {
+    try {
+      f(v);
+    } catch (e) {
+      /* noop */
+    }
+  });
+}
+export function isSpeaking() {
+  return _speaking;
+}
+export function onSpeaking(cb) {
+  speakListeners.add(cb);
+  return () => speakListeners.delete(cb);
+}
+
 export function say(text) {
   if (!enabled || !text) return;
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
@@ -64,10 +86,20 @@ export function say(text) {
     u.rate = 1.1;
     u.pitch = 1.05;
     u.volume = 0.95;
-    window.speechSynthesis.cancel(); // 連続再生のたまりを防ぐ
+    const done = () => {
+      if (speakFallback) clearTimeout(speakFallback);
+      setSpeaking(false);
+    };
+    u.onend = done;
+    u.onerror = done;
+    window.speechSynthesis.cancel();
+    setSpeaking(true);
     window.speechSynthesis.speak(u);
+    // 念のための保険（onendが来ない端末対策）
+    if (speakFallback) clearTimeout(speakFallback);
+    speakFallback = setTimeout(() => setSpeaking(false), Math.min(4000, text.length * 160 + 800));
   } catch (e) {
-    /* noop */
+    setSpeaking(false);
   }
 }
 

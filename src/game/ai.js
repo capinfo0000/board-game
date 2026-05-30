@@ -77,7 +77,11 @@ function shouldUseUltimate(state, player, threshold) {
 export function chooseMove(state) {
   const player = getCurrentPlayer(state);
   const playable = getPlayableCards(player, state.total);
-  if (playable.length === 0) return null; // 出せない（エンジン側でバースト処理）
+  if (playable.length === 0) {
+    // 出せない。手札まわしが残っていれば使って粘る（バースト回避）
+    if (!player.ultimateUsed) return { type: 'ultimate' };
+    return null; // 詰み（エンジン側でバースト処理）
+  }
 
   const diff = player.difficulty || DIFFICULTY.NORMAL;
 

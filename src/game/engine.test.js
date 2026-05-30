@@ -1,7 +1,7 @@
 // エンジンの動作確認（node --test で実行）
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, playCard, useUltimate, getCurrentPlayer, isPlayable } from './engine.js';
+import { createGame, playCard, useUltimate, forfeit, getCurrentPlayer, isPlayable } from './engine.js';
 import { chooseMove } from './ai.js';
 import { buildDeck } from './cards.js';
 import { LIMIT, KIND } from './constants.js';
@@ -96,17 +96,34 @@ test('手札枚数は設定できる（3枚）', () => {
   for (const p of g.players) assert.equal(p.hand.length, 3);
 });
 
-test('ライフ1なら最初のバーストで即ひとり負け', () => {
+test('ライフ1で詰み・手札まわし使用済なら即ひとり負け', () => {
   let g = createGame({ players: [{ name: 'A' }, { name: 'B' }], lives: 1 });
   const cur = getCurrentPlayer(g); // A
   cur.hand[0] = { id: 's101', kind: KIND.SET101, value: 0, label: '101' };
-  // Bの手札を全て「出せない数字」にする（場101では+1以上は不可）
   const b = g.players[1];
+  b.ultimateUsed = true; // 手札まわしは使い切っている
   for (let i = 0; i < b.hand.length; i += 1) {
     b.hand[i] = { id: `bn${i}`, kind: KIND.NUMBER, value: 5, label: '5' };
   }
-  // Aが101を出す→場101→Bの番→Bは出せず即バースト→ライフ0→ひとり負け
-  g = playCard(g, cur.id, 's101');
+  g = playCard(g, cur.id, 's101'); // 場101→Bは出せず・手札まわしも無し→即バースト→負け
+  assert.equal(g.phase, 'gameOver');
+  assert.equal(g.loserId, b.id);
+});
+
+test('詰みでも手札まわしが残っていればまだ負けではない（投了でバースト）', () => {
+  let g = createGame({ players: [{ name: 'A' }, { name: 'B' }], lives: 1 });
+  const cur = getCurrentPlayer(g);
+  cur.hand[0] = { id: 's101', kind: KIND.SET101, value: 0, label: '101' };
+  const b = g.players[1];
+  // b.ultimateUsed は false（手札まわし残っている）
+  for (let i = 0; i < b.hand.length; i += 1) {
+    b.hand[i] = { id: `bn${i}`, kind: KIND.NUMBER, value: 5, label: '5' };
+  }
+  g = playCard(g, cur.id, 's101'); // 場101→Bは出せないが手札まわしが残る→まだ続行
+  assert.equal(g.phase, 'playing', '手札まわしが残っているので負けではない');
+  assert.equal(getCurrentPlayer(g).id, b.id, 'Bの手番のまま');
+  // Bが手札まわしを使わずバースト（投了）
+  g = forfeit(g, b.id);
   assert.equal(g.phase, 'gameOver');
   assert.equal(g.loserId, b.id);
 });

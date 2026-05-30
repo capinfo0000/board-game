@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createGame, playCard, useUltimate } from './game/engine.js';
+import { createGame, playCard, useUltimate, forfeit } from './game/engine.js';
 import { chooseMove } from './game/ai.js';
-import { sfx, say } from './sound.js';
+import { sfx, say, isSpeaking, onSpeaking } from './sound.js';
 import SetupScreen from './components/SetupScreen.jsx';
 import GameScreen from './components/GameScreen.jsx';
 import GameOverModal from './components/GameOverModal.jsx';
@@ -36,7 +36,10 @@ export default function App() {
   const [reviewPlayerId, setReviewPlayerId] = useState(null); // 手札確認中の（直前に出した）人間
   const [bustInfo, setBustInfo] = useState(null); // バースト演出（ゲーム終了時のフラッシュ）
   const [roundEndInfo, setRoundEndInfo] = useState(null); // ラウンド終了（バーストで区切り）
+  const [speaking, setSpeaking] = useState(isSpeaking());
   const [showHelp, setShowHelp] = useState(false);
+
+  useEffect(() => onSpeaking(setSpeaking), []);
 
   const prevTurnRef = useRef(-1);
   const prevBustSeqRef = useRef(0);
@@ -104,9 +107,9 @@ export default function App() {
         sfx.win();
         const ln = game.loserId && game.players.find((p) => p.id === game.loserId)?.name;
         const wn = game.winnerId && game.players.find((p) => p.id === game.winnerId)?.name;
-        if (ln) say(`${ln}の、まけ！`);
-        else if (wn) say(`${wn}の、かち！`);
-      }, 500);
+        if (ln) say(`バースト！ ${ln}の、まけ！`);
+        else if (wn) say(`バースト！ ${wn}の、かち！`);
+      }, 450);
       return () => clearTimeout(t);
     }
     return undefined;
@@ -127,11 +130,13 @@ export default function App() {
     if (!game || game.phase !== 'playing') return;
     if (reviewPlayerId) return; // 手札確認の演出中は止める
     if (roundEndInfo) return; // ラウンド終了の区切り中は止める
+    if (speaking) return; // 読み上げ中は待つ
     const cur = game.players[game.currentPlayerIndex];
     if (!cur || !cur.isAI || cur.eliminated) return;
 
     const delay = 700 + Math.random() * 700;
     aiTimerRef.current = setTimeout(() => {
+      if (isSpeaking()) return; // 読み上げ中なら見送り（終了時に再スケジュール）
       const move = chooseMove(game);
       if (!move) return;
       if (move.type === 'ultimate') {
@@ -144,7 +149,7 @@ export default function App() {
     return () => {
       if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     };
-  }, [game?.turnId, game?.turnPlaysRemaining, game?.phase, reviewPlayerId, roundEndInfo]);
+  }, [game?.turnId, game?.turnPlaysRemaining, game?.phase, reviewPlayerId, roundEndInfo, speaking]);
 
   // --- 手番終了後に「引いたカードの確認」を挟むか判定 ---
   function maybeReview(prev, next, actingId) {
@@ -178,6 +183,9 @@ export default function App() {
     const next = useUltimate(game, actingId);
     setGame(next);
     maybeReview(game, next, actingId);
+  }
+  function handleForfeit() {
+    setGame((g) => forfeit(g, g.players[g.currentPlayerIndex].id));
   }
   function reveal() {
     setGateOpen(false);
@@ -231,6 +239,7 @@ export default function App() {
         onReveal={reveal}
         onPlay={handlePlay}
         onUltimate={handleUltimate}
+        onForfeit={handleForfeit}
         onOpenHelp={() => setShowHelp(true)}
         onHome={goHome}
       />

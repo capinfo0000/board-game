@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LIMIT, KIND, DIFFICULTY_LABEL } from '../game/constants.js';
 import { isPlayable, directionArrow } from '../game/engine.js';
-import { sfx, say, isSoundOn, setSoundOn } from '../sound.js';
+import { sfx, say, isSoundOn, setSoundOn, isSpeaking, onSpeaking } from '../sound.js';
 import CardView from './CardView.jsx';
 import LogPanel from './LogPanel.jsx';
 import PassScreen from './PassScreen.jsx';
@@ -81,6 +81,7 @@ export default function GameScreen({
   onReveal,
   onPlay,
   onUltimate,
+  onForfeit,
   onOpenHelp,
   onHome,
 }) {
@@ -93,6 +94,9 @@ export default function GameScreen({
   const [rotateKey, setRotateKey] = useState(0);
   const [rotating, setRotating] = useState(false);
   const [soundOn, setSoundOnState] = useState(isSoundOn());
+  const [speaking, setSpeaking] = useState(isSpeaking());
+
+  useEffect(() => onSpeaking(setSpeaking), []);
 
   const totalRef = useRef(game.total);
   const fxSeqRef = useRef(game.lastAction?.seq || 0);
@@ -165,6 +169,9 @@ export default function GameScreen({
     }
   }
 
+  // 読み上げ中はカードを出せない
+  if (speaking) bottomSelectable = false;
+
   const opponents = game.players.filter((p) => !bottomPlayer || p.id !== bottomPlayer.id);
 
   // 円卓の上側〜左右に相手を配置（下側は自分の席）
@@ -227,9 +234,22 @@ export default function GameScreen({
   } else if (!privacy && current && !current.isAI) {
     banner = <span>{current.name} の番</span>;
   }
+  if (speaking) banner = <span>🔊 読み上げ中…</span>;
 
   const ultDisabled = !bottomSelectable || !current || current.ultimateUsed;
   const selfActive = bottomPlayer && current && bottomPlayer.id === current.id && !bottomPlayer.eliminated;
+
+  // 出せる札がなく、手札まわしが残っている → 使うか/バーストかを確認
+  const myTurnActive =
+    current &&
+    bottomPlayer &&
+    current.id === bottomPlayer.id &&
+    !current.isAI &&
+    !current.eliminated &&
+    game.phase === 'playing' &&
+    (privacy ? !gateOpen : true);
+  const noPlayable = bottomPlayer ? bottomPlayer.hand.every((c) => !isPlayable(c, game.total)) : false;
+  const stuck = myTurnActive && noPlayable && current && !current.ultimateUsed;
 
   return (
     <div className="game">
@@ -370,6 +390,27 @@ export default function GameScreen({
               </button>
               <button className="btn primary" onClick={() => setConfirmCard(null)}>
                 やめる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {stuck && (
+        <div className="overlay">
+          <div className="modal center">
+            <div style={{ fontSize: 42 }}>😣</div>
+            <h2>出せるカードがありません</h2>
+            <p style={{ fontSize: 14, lineHeight: 1.6 }}>
+              まだ負けではありません！ <b>手札まわし</b>を使うと全員の手札が入れ替わり、
+              出せる札が来るかもしれません。
+            </p>
+            <div className="actions-bar mt">
+              <button className="btn primary" onClick={onUltimate}>
+                🔄 手札まわしを使う
+              </button>
+              <button className="btn danger" onClick={onForfeit}>
+                使わずにバースト
               </button>
             </div>
           </div>

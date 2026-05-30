@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createGame, playCard, useUltimate } from '../game/engine.js';
+import { createGame, playCard, useUltimate, forfeit } from '../game/engine.js';
 import { chooseMove } from '../game/ai.js';
 import { createHost, joinRoom } from '../net/peer.js';
 import { redactStateFor } from '../net/redact.js';
-import { sfx, say } from '../sound.js';
+import { sfx, say, isSpeaking, onSpeaking } from '../sound.js';
 import GameScreen from './GameScreen.jsx';
 import GameOverModal from './GameOverModal.jsx';
 import HelpModal from './HelpModal.jsx';
@@ -32,7 +32,10 @@ export default function OnlineGame({ onExit }) {
   const [game, setGame] = useState(null);
   const [myId, setMyId] = useState(null);
   const [bustInfo, setBustInfo] = useState(null);
+  const [speaking, setSpeaking] = useState(isSpeaking());
   const [showHelp, setShowHelp] = useState(false);
+
+  useEffect(() => onSpeaking(setSpeaking), []);
 
   const hostCtrlRef = useRef(null);
   const clientCtrlRef = useRef(null);
@@ -79,10 +82,10 @@ export default function OnlineGame({ onExit }) {
   function hostApply(playerId, action) {
     const g = gameRef.current;
     if (!g || g.phase !== 'playing') return;
-    const ng =
-      action.kind === 'ultimate'
-        ? useUltimate(g, playerId)
-        : playCard(g, playerId, action.cardId, action.choice ?? null);
+    let ng;
+    if (action.kind === 'ultimate') ng = useUltimate(g, playerId);
+    else if (action.kind === 'forfeit') ng = forfeit(g, playerId);
+    else ng = playCard(g, playerId, action.cardId, action.choice ?? null);
     if (ng === g) return; // 無効手
     gameRef.current = ng;
     setGame(ng);
@@ -270,17 +273,19 @@ export default function OnlineGame({ onExit }) {
   useEffect(() => {
     if (role !== 'host') return undefined;
     if (!game || game.phase !== 'playing') return undefined;
+    if (speaking) return undefined; // 読み上げ中は待つ
     const cur = game.players[game.currentPlayerIndex];
     if (!cur || cur.eliminated) return undefined;
     const delay = cur.isAI ? 800 + Math.random() * 600 : 30000; // 人間は30秒で自動
     aiTimerRef.current = setTimeout(() => {
+      if (isSpeaking()) return;
       const mv = chooseMove(gameRef.current);
       if (mv) hostApply(cur.id, mv);
     }, delay);
     return () => {
       if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     };
-  }, [role, game?.turnId, game?.turnPlaysRemaining, game?.phase]);
+  }, [role, game?.turnId, game?.turnPlaysRemaining, game?.phase, speaking]);
 
   // ---------- 共通：バースト演出 ----------
   useEffect(() => {
@@ -302,8 +307,8 @@ export default function OnlineGame({ onExit }) {
         sfx.win();
         const ln = game.loserId && game.players.find((p) => p.id === game.loserId)?.name;
         const wn = game.winnerId && game.players.find((p) => p.id === game.winnerId)?.name;
-        if (ln) say(`${ln}の、まけ！`);
-        else if (wn) say(`${wn}の、かち！`);
+        if (ln) say(`バースト！ ${ln}の、まけ！`);
+        else if (wn) say(`バースト！ ${wn}の、かち！`);
       }, 500);
       return () => clearTimeout(t);
     }
@@ -318,6 +323,10 @@ export default function OnlineGame({ onExit }) {
   function handleUltimate() {
     if (role === 'host') hostApply(myId, { kind: 'ultimate' });
     else clientCtrlRef.current.send({ t: 'action', action: { kind: 'ultimate' } });
+  }
+  function handleForfeit() {
+    if (role === 'host') hostApply(myId, { kind: 'forfeit' });
+    else clientCtrlRef.current.send({ t: 'action', action: { kind: 'forfeit' } });
   }
 
   // ================= 描画 =================
@@ -335,6 +344,7 @@ export default function OnlineGame({ onExit }) {
           onReveal={() => {}}
           onPlay={handlePlay}
           onUltimate={handleUltimate}
+          onForfeit={handleForfeit}
           onOpenHelp={() => setShowHelp(true)}
           onHome={leaveRoom}
         />
@@ -445,7 +455,7 @@ export default function OnlineGame({ onExit }) {
               <h2 style={{ margin: 0 }}>参加者（{seats.length}/{MAX}）</h2>
               {role === 'host' && (
                 <button className="btn ghost small" onClick={addAi} disabled={seats.length >= MAX}>
-                  🤖 AIを追加
+                  🤖 CPUを追加
                 </button>
               )}
             </div>
@@ -457,7 +467,7 @@ export default function OnlineGame({ onExit }) {
                 <span style={{ flex: 1, fontWeight: 700 }}>
                   {s.name}
                   {s.id === myId ? '（あなた）' : ''}
-                  {s.isAI ? '（AI）' : ''}
+                  {s.isAI ? '（CPU）' : ''}
                 </span>
                 {role === 'host' && s.isAI && (
                   <button className="remove" onClick={() => removeSeat(s.id)}>✕</button>
