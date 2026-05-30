@@ -83,7 +83,7 @@ export default function OnlineGame({ onExit }) {
     const g = gameRef.current;
     if (!g || g.phase !== 'playing') return;
     let ng;
-    if (action.kind === 'ultimate') ng = useUltimate(g, playerId);
+    if (action.kind === 'ultimate') ng = useUltimate(g, playerId, action.targetId);
     else if (action.kind === 'forfeit') ng = forfeit(g, playerId);
     else ng = playCard(g, playerId, action.cardId, action.choice ?? null);
     if (ng === g) return; // 無効手
@@ -280,7 +280,9 @@ export default function OnlineGame({ onExit }) {
     aiTimerRef.current = setTimeout(() => {
       if (isSpeaking()) return;
       const mv = chooseMove(gameRef.current);
-      if (mv) hostApply(cur.id, mv);
+      if (!mv) return;
+      if (mv.type === 'ultimate') hostApply(cur.id, { kind: 'ultimate', targetId: mv.targetId });
+      else hostApply(cur.id, { kind: 'play', cardId: mv.cardId, choice: mv.choice ?? null });
     }, delay);
     return () => {
       if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
@@ -320,9 +322,9 @@ export default function OnlineGame({ onExit }) {
     if (role === 'host') hostApply(myId, { kind: 'play', cardId, choice });
     else clientCtrlRef.current.send({ t: 'action', action: { kind: 'play', cardId, choice } });
   }
-  function handleUltimate() {
-    if (role === 'host') hostApply(myId, { kind: 'ultimate' });
-    else clientCtrlRef.current.send({ t: 'action', action: { kind: 'ultimate' } });
+  function handleUltimate(targetId) {
+    if (role === 'host') hostApply(myId, { kind: 'ultimate', targetId });
+    else clientCtrlRef.current.send({ t: 'action', action: { kind: 'ultimate', targetId } });
   }
   function handleForfeit() {
     if (role === 'host') hostApply(myId, { kind: 'forfeit' });

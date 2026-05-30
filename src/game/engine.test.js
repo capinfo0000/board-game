@@ -51,7 +51,7 @@ test('AI同士で最後まで進行し勝者が決まる（クラッシュしな
       assert.ok(move, '手番プレイヤーは必ず手を持つ（出せなければエンジンが自動バースト）');
       const me = getCurrentPlayer(g);
       if (move.type === 'ultimate') {
-        g = useUltimate(g, me.id);
+        g = useUltimate(g, me.id, move.targetId);
       } else {
         g = playCard(g, me.id, move.cardId, move.choice ?? null);
       }
@@ -83,7 +83,7 @@ test('ひとり勝ちモードでは最後の1人が決まるまで続く', () =
       steps += 1;
       const move = chooseMove(g);
       const me = getCurrentPlayer(g);
-      g = move.type === 'ultimate' ? useUltimate(g, me.id) : playCard(g, me.id, move.cardId, move.choice ?? null);
+      g = move.type === 'ultimate' ? useUltimate(g, me.id, move.targetId) : playCard(g, me.id, move.cardId, move.choice ?? null);
     }
     assert.equal(g.phase, 'gameOver');
     assert.ok(g.winnerId, 'ひとり勝ちが決まる');
@@ -128,14 +128,22 @@ test('詰みでも手札まわしが残っていればまだ負けではない�
   assert.equal(g.loserId, b.id);
 });
 
-test('手札まわしは手番を終えず、進行方向と逆に回す', () => {
+test('手札こうかん：指定相手と手札を交換し、手番は終わらない', () => {
   let g = createGame({ players: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] });
-  const aId = getCurrentPlayer(g).id;
-  const p1Before = g.players[1].hand.map((c) => c.id).join(',');
-  g = useUltimate(g, aId); // direction +1 → 左回り（i の手札が i-1 へ）
+  const aId = g.players[0].id;
+  const cId = g.players[2].id;
+  const aBefore = g.players[0].hand.map((c) => c.id).join(',');
+  const cBefore = g.players[2].hand.map((c) => c.id).join(',');
+  g = useUltimate(g, aId, cId); // A が C と交換
   assert.equal(getCurrentPlayer(g).id, aId, '手番は同じプレイヤーのまま（出さないといけない）');
   assert.equal(g.players.find((p) => p.id === aId).ultimateUsed, true);
-  assert.equal(g.players[0].hand.map((c) => c.id).join(','), p1Before, 'p0 が p1 の手札を受け取る');
+  assert.equal(g.players[0].hand.map((c) => c.id).join(','), cBefore, 'A が C の手札を受け取る');
+  assert.equal(g.players[2].hand.map((c) => c.id).join(','), aBefore, 'C が A の手札を受け取る');
+  // 自分や不正な相手とは交換できない
+  let g2 = createGame({ players: [{ name: 'A' }, { name: 'B' }] });
+  const before = g2;
+  g2 = useUltimate(g2, g2.players[0].id, g2.players[0].id); // 自分はNG
+  assert.equal(g2, before, '自分とは交換できない');
 });
 
 test('101カードは場を101にする', () => {

@@ -74,12 +74,22 @@ function shouldUseUltimate(state, player, threshold) {
   return unplayable >= threshold;
 }
 
+// 手札こうかんの相手（手札が多い相手を選ぶ）。いなければ null
+function pickSwapTarget(state, playerId) {
+  const opps = opponents(state, playerId);
+  if (!opps.length) return null;
+  return opps.slice().sort((a, b) => b.hand.length - a.hand.length)[0].id;
+}
+
 export function chooseMove(state) {
   const player = getCurrentPlayer(state);
   const playable = getPlayableCards(player, state.total, state.pendingPlays);
   if (playable.length === 0) {
-    // 出せない。手札まわしが残っていれば使って粘る（バースト回避）
-    if (!player.ultimateUsed) return { type: 'ultimate' };
+    // 出せない。手札こうかんが残っていれば、手札の多い相手と交換して粘る
+    if (!player.ultimateUsed) {
+      const targetId = pickSwapTarget(state, player.id);
+      if (targetId) return { type: 'ultimate', targetId };
+    }
     return null; // 詰み（エンジン側でバースト処理）
   }
 
@@ -94,7 +104,8 @@ export function chooseMove(state) {
   // --- 普通／強い：ヒューリスティック ---
   const ultThreshold = diff === DIFFICULTY.HARD ? 3 : 4;
   if (shouldUseUltimate(state, player, ultThreshold)) {
-    return { type: 'ultimate' };
+    const targetId = pickSwapTarget(state, player.id);
+    if (targetId) return { type: 'ultimate', targetId };
   }
 
   const jitter = diff === DIFFICULTY.HARD ? 1.5 : 5; // 強いほどブレが小さい

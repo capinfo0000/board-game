@@ -436,32 +436,34 @@ export function forfeit(prev, playerId) {
 
 // ---- 公開アクション：必殺技（手札を右回転で全交換）----
 
-export function useUltimate(prev, playerId) {
+export function useUltimate(prev, playerId, targetId) {
   const state = clone(prev);
   if (state.phase !== 'playing') return prev;
   const player = getCurrentPlayer(state);
   if (!player || player.id !== playerId) return prev;
   if (player.ultimateUsed) return prev;
+  // 交換相手は自分以外の生存プレイヤー
+  const target = state.players.find(
+    (p) => p.id === targetId && !p.eliminated && p.id !== playerId,
+  );
+  if (!target) return prev;
 
-  const living = state.players.filter((p) => !p.eliminated);
-  if (living.length >= 2) {
-    // 進行方向と逆まわりに手札を回す（右進行なら左へ／左進行なら右へ）
-    const hands = living.map((p) => p.hand);
-    const n = living.length;
-    const shift = state.direction === 1 ? -1 : 1;
-    for (let i = 0; i < n; i += 1) {
-      living[(i + shift + n) % n].hand = hands[i];
-    }
-  }
+  // 手札を1対1で交換
+  const tmp = player.hand;
+  player.hand = target.hand;
+  target.hand = tmp;
+
   player.ultimateUsed = true;
   state.lastDrawn = [];
-  state.lastAction = { playerId, kind: 'ultimate', seq: (prev.lastAction?.seq || 0) + 1 };
-  addLog(
-    state,
-    `🔄 ${player.name} が手札まわし！ 全員の手札を${state.direction === 1 ? '左' : '右'}どなりへ回す`,
-  );
+  state.lastAction = {
+    playerId,
+    kind: 'ultimate',
+    targetName: target.name,
+    seq: (prev.lastAction?.seq || 0) + 1,
+  };
+  addLog(state, `🔁 ${player.name} が ${target.name} と手札こうかん！`);
 
-  // 手番は終わらない。続けてカードを出す（出せなければ＝手札まわしも使い切ったのでバースト）
+  // 手番は終わらない。続けてカードを出す（出せなければ手札こうかんも使い切ったのでバースト）
   const playable = getPlayableCards(player, state.total, state.pendingPlays);
   if (playable.length === 0) {
     doBust(state, player);

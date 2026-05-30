@@ -15,6 +15,7 @@ const FX_MSG = {
   nominate: '🎯 ショット！',
   set101: '⚡ 101！',
   minus: '➖ ダウン！',
+  ultimate: '🔁 手札こうかん！',
 };
 const SPECIAL_SOUND = ['skip', 'reverse', 'draw2', 'nominate', 'set101', 'ultimate'];
 const SPECIAL_KINDS = [KIND.PASS, KIND.SKIP, KIND.DRAW2, KIND.REVERSE, KIND.RESET, KIND.NOMINATE];
@@ -45,7 +46,7 @@ function readingFor(la) {
     case KIND.NOMINATE:
       return 'ショット';
     case 'ultimate':
-      return 'てふだまわし';
+      return 'てふだこうかん';
     default:
       return '';
   }
@@ -91,9 +92,7 @@ export default function GameScreen({
   const [displayTotal, setDisplayTotal] = useState(game.total);
   const [fx, setFx] = useState(null);
   const [fxKey, setFxKey] = useState(0);
-  const [rotateKey, setRotateKey] = useState(0);
-  const [rotating, setRotating] = useState(false);
-  const [rotateLeft, setRotateLeft] = useState(false);
+  const [swapPicking, setSwapPicking] = useState(false);
   const [soundOn, setSoundOnState] = useState(isSoundOn());
   const [speaking, setSpeaking] = useState(isSpeaking());
 
@@ -101,7 +100,6 @@ export default function GameScreen({
 
   const totalRef = useRef(game.total);
   const fxSeqRef = useRef(game.lastAction?.seq || 0);
-  const rotTimerRef = useRef(null);
 
   useEffect(() => {
     const from = totalRef.current;
@@ -131,19 +129,11 @@ export default function GameScreen({
     if (la.kind === 'reset') sfx.reset();
     else if (SPECIAL_SOUND.includes(la.kind)) sfx.special();
     else sfx.card();
-    say(readingFor(la));
-    if (la.kind === 'ultimate') {
-      setRotateLeft(game.direction === 1); // 右進行なら手札は左へ回る
-      setRotating(true);
-      setRotateKey((k) => k + 1);
-      if (rotTimerRef.current) clearTimeout(rotTimerRef.current);
-      rotTimerRef.current = setTimeout(() => setRotating(false), 1800);
-    } else {
-      const msg = FX_MSG[la.kind];
-      if (msg) {
-        setFx(msg);
-        setFxKey((k) => k + 1);
-      }
+    say(la.kind === 'ultimate' ? 'てふだこうかん' : readingFor(la));
+    const msg = FX_MSG[la.kind];
+    if (msg) {
+      setFx(msg);
+      setFxKey((k) => k + 1);
     }
   }, [game.lastAction?.seq]);
 
@@ -176,12 +166,16 @@ export default function GameScreen({
 
   const opponents = game.players.filter((p) => !bottomPlayer || p.id !== bottomPlayer.id);
 
-  // 円卓の上側〜左右に相手を配置（下側は自分の席）
+  // 円卓の上側〜左右に相手を配置（下側は自分の席）。画面端からはみ出さないよう調整
   function seatPos(j, m) {
     const ang = ((180 + ((j + 1) * 180) / (m + 1)) * Math.PI) / 180;
-    const rx = 47;
-    const ry = 46;
-    return { left: `${50 + rx * Math.cos(ang)}%`, top: `${50 + ry * Math.sin(ang)}%` };
+    const rx = m >= 5 ? 42 : 45;
+    const ry = m >= 5 ? 47 : 45;
+    let left = 50 + rx * Math.cos(ang);
+    let top = 50 + ry * Math.sin(ang);
+    left = Math.max(11, Math.min(89, left)); // 左右の見切れ防止
+    top = Math.max(8, Math.min(74, top));
+    return { left: `${left}%`, top: `${top}%` };
   }
 
   function doPlay(card) {
@@ -355,10 +349,10 @@ export default function GameScreen({
           <button
             className="btn"
             disabled={ultDisabled}
-            onClick={onUltimate}
-            title="全員の手札を進行方向と逆まわりに回す（1人1回・回した後にカードを出す）"
+            onClick={() => setSwapPicking(true)}
+            title="指定したプレイヤーと手札をまるごと交換する（1人1回・交換後にカードを出す）"
           >
-            🔄 手札まわし{current && current.ultimateUsed ? '（使用済）' : ''}
+            🔁 手札こうかん{current && current.ultimateUsed ? '（使用済）' : ''}
           </button>
         </div>
       </div>
@@ -400,18 +394,18 @@ export default function GameScreen({
         </div>
       )}
 
-      {stuck && (
+      {stuck && !swapPicking && (
         <div className="overlay">
           <div className="modal center">
             <div style={{ fontSize: 42 }}>😣</div>
             <h2>出せるカードがありません</h2>
             <p style={{ fontSize: 14, lineHeight: 1.6 }}>
-              まだ負けではありません！ <b>手札まわし</b>を使うと全員の手札が入れ替わり、
+              まだ負けではありません！ <b>手札こうかん</b>で誰かと手札をまるごと交換すれば、
               出せる札が来るかもしれません。
             </p>
             <div className="actions-bar mt">
-              <button className="btn primary" onClick={onUltimate}>
-                🔄 手札まわしを使う
+              <button className="btn primary" onClick={() => setSwapPicking(true)}>
+                🔁 手札こうかんを使う
               </button>
               <button className="btn danger" onClick={onForfeit}>
                 使わずにバースト
@@ -421,28 +415,18 @@ export default function GameScreen({
         </div>
       )}
 
-      {/* 手札まわしの演出：右へ回る */}
-      {rotating && (
-        <div className="rotate-overlay" key={rotateKey}>
-          <div className="rotate-ring">🔄</div>
-          <div className="rotate-title">手札まわし</div>
-          <div className="rotate-row">
-            {game.players.map((p, i) => (
-              <React.Fragment key={p.id}>
-                <div className="rotate-ava">
-                  <span className={`rotate-hand${rotateLeft ? ' left' : ''}`}>🂠</span>
-                  {p.avatar}
-                </div>
-                {i < game.players.length - 1 && (
-                  <span className="rotate-arrow">{rotateLeft ? '⬅️' : '➡️'}</span>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-          <div className="rotate-sub">
-            手札がみんな{rotateLeft ? '左' : '右'}どなりへ {rotateLeft ? '◀' : '▶'}
-          </div>
-        </div>
+      {/* 手札こうかんの相手を選ぶ */}
+      {swapPicking && current && (
+        <NominateModal
+          title="🔁 手札を交換する相手"
+          players={game.players}
+          selfId={current.id}
+          onPick={(tid) => {
+            setSwapPicking(false);
+            onUltimate(tid);
+          }}
+          onCancel={() => setSwapPicking(false)}
+        />
       )}
     </div>
   );

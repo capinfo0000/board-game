@@ -140,7 +140,7 @@ export default function App() {
       const move = chooseMove(game);
       if (!move) return;
       if (move.type === 'ultimate') {
-        setGame((g) => useUltimate(g, cur.id));
+        setGame((g) => useUltimate(g, cur.id, move.targetId));
       } else {
         setGame((g) => playCard(g, cur.id, move.cardId, move.choice ?? null));
       }
@@ -186,9 +186,9 @@ export default function App() {
     setGame(next);
     maybeReview(game, next, actingId);
   }
-  function handleUltimate() {
+  function handleUltimate(targetId) {
     const actingId = game.players[game.currentPlayerIndex].id;
-    const next = useUltimate(game, actingId);
+    const next = useUltimate(game, actingId, targetId);
     setGame(next);
     maybeReview(game, next, actingId);
   }

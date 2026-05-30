@@ -1,12 +1,12 @@
 import React from 'react';
 
-// 指名カードを出したときに「次に出す人」を選ぶ
-export default function NominateModal({ players, selfId, onPick, onCancel }) {
+// プレイヤーを1人選ぶ（ショット＝次に出す人 / 手札こうかんの相手）
+export default function NominateModal({ players, selfId, onPick, onCancel, title }) {
   const targets = players.filter((p) => !p.eliminated && p.id !== selfId);
   return (
     <div className="overlay" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>🎯 次に出す人を指名</h2>
+        <h2>{title || '🎯 次に出す人を指名'}</h2>
         <div className="nominate-list">
           {targets.map((p) => (
             <button key={p.id} onClick={() => onPick(p.id)}>
