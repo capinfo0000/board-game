@@ -416,8 +416,8 @@ button {
   position: absolute;
   left: 13%;
   right: 13%;
-  top: 14%;
-  bottom: 14%;
+  top: 16%;
+  bottom: 16%;
   border-radius: 50%;
   background: radial-gradient(circle at 50% 38%, var(--felt) 0%, var(--felt-d) 100%);
   display: flex;
