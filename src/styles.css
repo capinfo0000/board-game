@@ -1531,3 +1531,96 @@ button {
   letter-spacing: 2px;
   font-size: 15px;
 }
+
+/* ===========================================================
+   スマホ（狭い画面）向けの縮小調整：PC版と同じ円卓レイアウトを保ちつつ収める
+   =========================================================== */
+@media (max-width: 560px) {
+  .title h1 {
+    font-size: 44px;
+    letter-spacing: 8px;
+  }
+  .table {
+    height: clamp(216px, 40vh, 300px);
+  }
+  .felt-center {
+    width: 90%;
+  }
+  .felt-center .total {
+    font-size: 40px;
+  }
+  .felt-center .pile {
+    width: 48px;
+    height: 68px;
+  }
+  .felt-center .play-area {
+    gap: 8px;
+  }
+  /* 相手プレイヤーをひとまわり小さく */
+  .table-seat {
+    width: 56px;
+  }
+  .opp {
+    width: 56px;
+  }
+  .opp .seat-ava-wrap,
+  .opp-ava {
+    width: 40px;
+    height: 40px;
+  }
+  .opp .seat-ava {
+    font-size: 20px;
+  }
+  .opp-nm {
+    font-size: 10px;
+    max-width: 58px;
+  }
+  .opp-lives,
+  .opp-count {
+    font-size: 10px;
+  }
+  /* 手札カードを少し小さくして並べやすく */
+  .card {
+    width: 66px;
+    height: 94px;
+  }
+  .card .big {
+    font-size: 30px;
+  }
+  .card .corner {
+    font-size: 12px;
+  }
+  .card .ic-big {
+    font-size: 24px;
+  }
+  .hand {
+    gap: 6px;
+    padding: 12px 6px 14px;
+  }
+  .btn {
+    padding: 12px 18px;
+  }
+}
+
+/* さらに狭い端末 */
+@media (max-width: 380px) {
+  .card {
+    width: 60px;
+    height: 86px;
+  }
+  .card .big {
+    font-size: 27px;
+  }
+  .felt-center .total {
+    font-size: 36px;
+  }
+  .opp,
+  .table-seat {
+    width: 50px;
+  }
+  .opp .seat-ava-wrap,
+  .opp-ava {
+    width: 36px;
+    height: 36px;
+  }
+}
