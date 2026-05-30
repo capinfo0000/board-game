@@ -52,28 +52,6 @@ function readingFor(la) {
   }
 }
 
-// 相手プレイヤー（裏向きの手札で枚数が見える）
-function Opponent({ p, active }) {
-  const backs = Math.min(p.hand.length, 7);
-  return (
-    <div className={`opp${active ? ' active' : ''}${p.eliminated ? ' eliminated' : ''}`}>
-      <div className="seat-ava-wrap opp-ava">
-        {active && <span className="turn-ring" aria-hidden />}
-        <div className="seat-ava">{p.avatar}</div>
-        {!p.ultimateUsed && !p.eliminated && <span className="ult-badge">🔄</span>}
-      </div>
-      <div className="opp-fan" title={`${p.hand.length}枚`}>
-        {Array.from({ length: backs }).map((_, i) => (
-          <span className="mini-back" key={i} />
-        ))}
-        <span className="opp-count">{p.hand.length}</span>
-      </div>
-      <div className="opp-nm">{p.name}</div>
-      <div className="opp-lives">{p.eliminated ? '☠️' : '❤'.repeat(p.lives)}</div>
-    </div>
-  );
-}
-
 export default function GameScreen({
   game,
   privacy,
@@ -166,16 +144,16 @@ export default function GameScreen({
 
   const opponents = game.players.filter((p) => !bottomPlayer || p.id !== bottomPlayer.id);
 
-  // 円卓のフチに沿って配置：アバターは枠の外（上）に、名前・ライフ・カードは枠の中（下）に来る
-  function seatPos(j, m) {
-    const ang = ((180 + ((j + 1) * 180) / (m + 1)) * Math.PI) / 180;
-    const rx = 35;
-    const ry = 33;
+  // 楕円リング上の座標（rx,ry=中心からの割合）。clampで見切れ防止
+  function ringPos(ang, rx, ry, lc, tc) {
     let left = 50 + rx * Math.cos(ang);
     let top = 50 + ry * Math.sin(ang);
-    left = Math.max(13, Math.min(87, left));
-    top = Math.max(11, Math.min(50, top));
+    left = Math.max(lc[0], Math.min(lc[1], left));
+    top = Math.max(tc[0], Math.min(tc[1], top));
     return { left: `${left}%`, top: `${top}%` };
+  }
+  function angleFor(j, m) {
+    return ((180 + ((j + 1) * 180) / (m + 1)) * Math.PI) / 180;
   }
 
   function doPlay(card) {
@@ -304,11 +282,40 @@ export default function GameScreen({
             </div>
           </div>
         </div>
-        {opponents.map((p, j) => (
-          <div className="table-seat" key={p.id} style={seatPos(j, opponents.length)}>
-            <Opponent p={p} active={current && p.id === current.id && !p.eliminated} />
-          </div>
-        ))}
+        {opponents.map((p, j) => {
+          const ang = angleFor(j, opponents.length);
+          const av = ringPos(ang, 48, 48, [7, 93], [5, 56]);
+          const inf = ringPos(ang, 30, 24, [16, 84], [16, 52]);
+          const active = current && p.id === current.id && !p.eliminated;
+          const backs = Math.min(p.hand.length, 7);
+          return (
+            <React.Fragment key={p.id}>
+              <div
+                className={`table-ava${p.eliminated ? ' eliminated' : ''}`}
+                style={{ left: av.left, top: av.top }}
+              >
+                <div className="seat-ava-wrap opp-ava">
+                  {active && <span className="turn-ring" aria-hidden />}
+                  <div className="seat-ava">{p.avatar}</div>
+                  {!p.ultimateUsed && !p.eliminated && <span className="ult-badge">🔁</span>}
+                </div>
+              </div>
+              <div
+                className={`table-info${active ? ' active' : ''}${p.eliminated ? ' eliminated' : ''}`}
+                style={{ left: inf.left, top: inf.top }}
+              >
+                <div className="opp-fan" title={`${p.hand.length}枚`}>
+                  {Array.from({ length: backs }).map((_, i) => (
+                    <span className="mini-back" key={i} />
+                  ))}
+                  <span className="opp-count">{p.hand.length}</span>
+                </div>
+                <div className="opp-nm">{p.name}</div>
+                <div className="opp-lives">{p.eliminated ? '☠️' : '❤'.repeat(p.lives)}</div>
+              </div>
+            </React.Fragment>
+          );
+        })}
       </div>
 
       <LogPanel log={game.log} />

@@ -473,6 +473,27 @@ button {
   width: 62px;
   z-index: 2;
 }
+/* アバター（枠の外）と情報（枠の中）を放射状に分けて配置 */
+.table-ava {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+.table-info {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 64px;
+  text-align: center;
+  z-index: 2;
+}
+.table-info.eliminated {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+.table-ava.eliminated {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
 
 /* ---------- 相手プレイヤー（裏向き手札で枚数表示） ---------- */
 .opp {
