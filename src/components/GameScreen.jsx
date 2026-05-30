@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { LIMIT, KIND } from '../game/constants.js';
+import { LIMIT, KIND, DIFFICULTY_LABEL } from '../game/constants.js';
 import { isPlayable, directionArrow } from '../game/engine.js';
 import { sfx, say, isSoundOn, setSoundOn } from '../sound.js';
 import CardView from './CardView.jsx';
-import PlayerSeats from './PlayerSeats.jsx';
 import LogPanel from './LogPanel.jsx';
 import PassScreen from './PassScreen.jsx';
 import NominateModal from './NominateModal.jsx';
@@ -16,14 +15,11 @@ const FX_MSG = {
   nominate: '🎯 指名！',
   set101: '⚡ 101！',
   minus: '➖ ダウン！',
-  ultimate: '🌀 手札まわし！',
 };
 const SPECIAL_SOUND = ['skip', 'reverse', 'draw2', 'nominate', 'set101', 'ultimate'];
-// 1枚でOKになる特殊カード（プラスマイナスに関わらない）
 const SPECIAL_KINDS = [KIND.PASS, KIND.SKIP, KIND.DRAW2, KIND.REVERSE, KIND.RESET, KIND.NOMINATE];
 const VALUE_KINDS = [KIND.NUMBER, KIND.MINUS, KIND.SET101];
 
-// 読み上げ用テキスト
 const NUM_READ = {
   1: 'いち', 2: 'に', 3: 'さん', 4: 'よん', 5: 'ご', 6: 'ろく', 7: 'なな', 8: 'はち',
   9: 'きゅう', 10: 'じゅう', 20: 'にじゅう', 30: 'さんじゅう', 40: 'よんじゅう',
@@ -55,6 +51,28 @@ function readingFor(la) {
   }
 }
 
+// 相手プレイヤー（裏向きの手札で枚数が見える）
+function Opponent({ p, active }) {
+  const backs = Math.min(p.hand.length, 7);
+  return (
+    <div className={`opp${active ? ' active' : ''}${p.eliminated ? ' eliminated' : ''}`}>
+      <div className="seat-ava-wrap opp-ava">
+        {active && <span className="turn-ring" aria-hidden />}
+        <div className="seat-ava">{p.avatar}</div>
+        {!p.ultimateUsed && !p.eliminated && <span className="ult-badge">🔄</span>}
+      </div>
+      <div className="opp-fan" title={`${p.hand.length}枚`}>
+        {Array.from({ length: backs }).map((_, i) => (
+          <span className="mini-back" key={i} />
+        ))}
+        <span className="opp-count">{p.hand.length}</span>
+      </div>
+      <div className="opp-nm">{p.name}</div>
+      <div className="opp-lives">{p.eliminated ? '☠️' : '❤'.repeat(p.lives)}</div>
+    </div>
+  );
+}
+
 export default function GameScreen({
   game,
   privacy,
@@ -67,17 +85,19 @@ export default function GameScreen({
   onHome,
 }) {
   const [nominateCardId, setNominateCardId] = useState(null);
-  const [confirmCard, setConfirmCard] = useState(null); // 2枚出し警告中のカード
+  const [confirmCard, setConfirmCard] = useState(null);
   const [bumpKey, setBumpKey] = useState(0);
   const [displayTotal, setDisplayTotal] = useState(game.total);
   const [fx, setFx] = useState(null);
   const [fxKey, setFxKey] = useState(0);
+  const [rotateKey, setRotateKey] = useState(0);
+  const [rotating, setRotating] = useState(false);
   const [soundOn, setSoundOnState] = useState(isSoundOn());
 
   const totalRef = useRef(game.total);
   const fxSeqRef = useRef(game.lastAction?.seq || 0);
+  const rotTimerRef = useRef(null);
 
-  // 合計のカウントアップ＆バウンド
   useEffect(() => {
     const from = totalRef.current;
     const to = game.total;
@@ -99,7 +119,6 @@ export default function GameScreen({
     return () => cancelAnimationFrame(raf);
   }, [game.total]);
 
-  // カード／特殊エフェクト＋効果音
   useEffect(() => {
     const la = game.lastAction;
     if (!la || la.seq === fxSeqRef.current) return;
@@ -107,11 +126,18 @@ export default function GameScreen({
     if (la.kind === 'reset') sfx.reset();
     else if (SPECIAL_SOUND.includes(la.kind)) sfx.special();
     else sfx.card();
-    say(readingFor(la)); // 出したカードを読み上げ
-    const msg = FX_MSG[la.kind];
-    if (msg) {
-      setFx(msg);
-      setFxKey((k) => k + 1);
+    say(readingFor(la));
+    if (la.kind === 'ultimate') {
+      setRotating(true);
+      setRotateKey((k) => k + 1);
+      if (rotTimerRef.current) clearTimeout(rotTimerRef.current);
+      rotTimerRef.current = setTimeout(() => setRotating(false), 1800);
+    } else {
+      const msg = FX_MSG[la.kind];
+      if (msg) {
+        setFx(msg);
+        setFxKey((k) => k + 1);
+      }
     }
   }, [game.lastAction?.seq]);
 
@@ -139,6 +165,8 @@ export default function GameScreen({
     }
   }
 
+  const opponents = game.players.filter((p) => !bottomPlayer || p.id !== bottomPlayer.id);
+
   function doPlay(card) {
     if (card.kind === KIND.NOMINATE) {
       setNominateCardId(card.id);
@@ -148,7 +176,6 @@ export default function GameScreen({
   }
   function handleCardClick(card) {
     if (!bottomSelectable || !isPlayable(card, game.total)) return;
-    // 2枚出しの1枚目で、特殊カードがあるのにプラスマイナス系を出そうとしたら警告
     const forcedFirst = game.pendingPlays === 2 && game.turnPlaysRemaining === 2;
     const isValue = VALUE_KINDS.includes(card.kind);
     const hasSpecial = bottomPlayer.hand.some((c) => SPECIAL_KINDS.includes(c.kind));
@@ -171,8 +198,6 @@ export default function GameScreen({
 
   const hot = game.total >= LIMIT - 15;
   const pct = Math.max(0, Math.min(100, (game.total / LIMIT) * 100));
-
-  // 場に出た直前のカード（lastActionから復元。必殺技は除く）
   const la = game.lastAction;
   const pileCard =
     la && la.kind && la.kind !== 'ultimate'
@@ -196,6 +221,7 @@ export default function GameScreen({
   }
 
   const ultDisabled = !bottomSelectable || !current || current.ultimateUsed;
+  const selfActive = bottomPlayer && current && bottomPlayer.id === current.id && !bottomPlayer.eliminated;
 
   return (
     <div className="game">
@@ -205,7 +231,7 @@ export default function GameScreen({
         </button>
         <div className="brand">ノイ</div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="icon-btn" onClick={toggleSound} title="効果音 ON/OFF">
+          <button className="icon-btn" onClick={toggleSound} title="効果音・読み上げ ON/OFF">
             {soundOn ? '🔊' : '🔇'}
           </button>
           <button className="icon-btn" onClick={onOpenHelp} title="あそびかた">
@@ -214,8 +240,14 @@ export default function GameScreen({
         </div>
       </div>
 
-      <PlayerSeats players={game.players} currentIndex={game.currentPlayerIndex} />
+      {/* 相手プレイヤー（裏向き手札で枚数が見える） */}
+      <div className="opponents">
+        {opponents.map((p) => (
+          <Opponent key={p.id} p={p} active={current && p.id === current.id && !p.eliminated} />
+        ))}
+      </div>
 
+      {/* 中央の卓：場の合計 */}
       <div className="board">
         {fx && (
           <div className="fx-burst" key={fxKey}>
@@ -253,9 +285,21 @@ export default function GameScreen({
 
       <LogPanel log={game.log} />
 
+      {/* 自分 */}
       <div className="hand-area">
+        {bottomPlayer && (
+          <div className={`self-bar${selfActive ? ' active' : ''}`}>
+            <span className="self-ava">{bottomPlayer.avatar}</span>
+            <span className="self-nm">{bottomPlayer.name}</span>
+            <span className="self-lives">
+              {bottomPlayer.eliminated ? '☠️' : '❤'.repeat(bottomPlayer.lives)}
+            </span>
+            {bottomPlayer.isAI && (
+              <span className="small-muted">CPU・{DIFFICULTY_LABEL[bottomPlayer.difficulty]}</span>
+            )}
+          </div>
+        )}
         <div className="turn-banner">{banner}</div>
-
         <div className="hand">
           {bottomPlayer && !bottomPlayer.eliminated
             ? bottomPlayer.hand.map((card) =>
@@ -273,7 +317,6 @@ export default function GameScreen({
               )
             : null}
         </div>
-
         <div className="actions-bar">
           <button
             className="btn"
@@ -301,12 +344,8 @@ export default function GameScreen({
         <div className="overlay" onClick={() => setConfirmCard(null)}>
           <div className="modal center" onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 40 }}>⚠️</div>
-            <h2>2枚出しになります</h2>
-            <p style={{ fontSize: 14, lineHeight: 1.6 }}>
-              この札（プラス・マイナス系）を出すと、続けて<b>もう1枚</b>出すことになります。
-              <br />
-              <b>特殊カード</b>（スキップ・リバース・リセット・パス・指名・次2枚）を出せば
-              <b>1枚で済み</b>、2枚出す番は次の人へ移ります。
+            <p style={{ fontSize: 16, lineHeight: 1.6, fontWeight: 700 }}>
+              このまま出すと、もう1枚出すことになります。
             </p>
             <div className="actions-bar mt">
               <button
@@ -324,6 +363,26 @@ export default function GameScreen({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 手札まわしの演出：右へ回る */}
+      {rotating && (
+        <div className="rotate-overlay" key={rotateKey}>
+          <div className="rotate-ring">🔄</div>
+          <div className="rotate-title">手札まわし</div>
+          <div className="rotate-row">
+            {game.players.map((p, i) => (
+              <React.Fragment key={p.id}>
+                <div className="rotate-ava">
+                  <span className="rotate-hand">🂠</span>
+                  {p.avatar}
+                </div>
+                {i < game.players.length - 1 && <span className="rotate-arrow">➡️</span>}
+              </React.Fragment>
+            ))}
+          </div>
+          <div className="rotate-sub">手札がみんな右どなりへ ▶</div>
         </div>
       )}
     </div>

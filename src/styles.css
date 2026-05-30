@@ -406,6 +406,105 @@ button {
   z-index: 2;
 }
 
+/* ---------- 相手プレイヤー（上側・裏向き手札で枚数表示） ---------- */
+.opponents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 64px;
+}
+.opp {
+  width: 78px;
+  text-align: center;
+  transition: transform 0.2s;
+}
+.opp.eliminated {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+.opp.active {
+  transform: translateY(-2px);
+}
+.opp-ava {
+  width: 46px;
+  height: 46px;
+  margin: 0 auto;
+}
+.opp-ava .seat-ava {
+  font-size: 24px;
+}
+.opp-fan {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 22px;
+  margin-top: 3px;
+}
+.mini-back {
+  width: 13px;
+  height: 19px;
+  border-radius: 3px;
+  background: linear-gradient(160deg, #1a5544, #0c352a);
+  border: 1px solid var(--gold-d);
+  margin-left: -6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.mini-back:first-child {
+  margin-left: 0;
+}
+.opp-count {
+  margin-left: 5px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--gold-l);
+}
+.opp-nm {
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink);
+}
+.opp-lives {
+  font-size: 11px;
+  color: var(--red);
+  letter-spacing: 1px;
+  min-height: 14px;
+}
+
+/* 自分の情報バー */
+.self-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  width: fit-content;
+  margin: 0 auto;
+}
+.self-bar.active {
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(247, 227, 166, 0.45);
+}
+.self-ava {
+  font-size: 22px;
+}
+.self-nm {
+  font-weight: 900;
+  color: var(--gold-l);
+}
+.self-lives {
+  color: var(--red);
+  letter-spacing: 1px;
+}
+
 /* ---------- 中央の卓（金縁＋フェルト） ---------- */
 .board {
   flex: 0 0 auto;
@@ -1218,4 +1317,92 @@ button {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* ---------- 手札まわしの演出（右へ回る） ---------- */
+.rotate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 56;
+  background: rgba(3, 14, 11, 0.82);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.rotate-ring {
+  font-size: 72px;
+  animation: spin 1.6s linear;
+  filter: drop-shadow(0 0 14px rgba(247, 227, 166, 0.7));
+}
+.rotate-title {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  background: var(--gold-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.rotate-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 92%;
+}
+.rotate-ava {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  background: radial-gradient(circle at 50% 32%, #1a5544, #0a2a22);
+  border: 2px solid var(--gold-d);
+}
+.rotate-hand {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 20px;
+  animation: rotMove 1s ease-in-out infinite;
+}
+@keyframes rotMove {
+  0% {
+    transform: translateX(-50%);
+    opacity: 1;
+  }
+  70% {
+    transform: translateX(34px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(34px);
+    opacity: 0;
+  }
+}
+.rotate-arrow {
+  font-size: 18px;
+}
+.rotate-sub {
+  color: var(--gold-l);
+  font-weight: 800;
+  letter-spacing: 2px;
+  font-size: 15px;
 }
