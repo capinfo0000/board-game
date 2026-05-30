@@ -20,7 +20,13 @@ export default function CardView({ card, faceDown, small, playable, selectable, 
 
   let big;
   if (card.kind === KIND.NUMBER) {
-    big = <div className="big">{card.label}</div>;
+    const isFace = card.label === 'J' || card.label === 'Q' || card.label === 'K';
+    big = (
+      <>
+        <div className="big">{isFace ? `+${card.value}` : card.label}</div>
+        {isFace && <div className="sub">{card.label}</div>}
+      </>
+    );
   } else if (card.kind === KIND.MINUS) {
     big = <div className="big">{card.label}</div>;
   } else if (card.kind === KIND.SET101) {

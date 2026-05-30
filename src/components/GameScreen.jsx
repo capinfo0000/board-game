@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LIMIT, KIND } from '../game/constants.js';
 import { isPlayable, directionArrow } from '../game/engine.js';
-import { sfx, isSoundOn, setSoundOn } from '../sound.js';
+import { sfx, say, isSoundOn, setSoundOn } from '../sound.js';
 import CardView from './CardView.jsx';
 import PlayerSeats from './PlayerSeats.jsx';
 import LogPanel from './LogPanel.jsx';
@@ -19,6 +19,41 @@ const FX_MSG = {
   ultimate: '🌀 手札まわし！',
 };
 const SPECIAL_SOUND = ['skip', 'reverse', 'draw2', 'nominate', 'set101', 'ultimate'];
+// 1枚でOKになる特殊カード（プラスマイナスに関わらない）
+const SPECIAL_KINDS = [KIND.PASS, KIND.SKIP, KIND.DRAW2, KIND.REVERSE, KIND.RESET, KIND.NOMINATE];
+const VALUE_KINDS = [KIND.NUMBER, KIND.MINUS, KIND.SET101];
+
+// 読み上げ用テキスト
+const NUM_READ = {
+  1: 'いち', 2: 'に', 3: 'さん', 4: 'よん', 5: 'ご', 6: 'ろく', 7: 'なな', 8: 'はち',
+  9: 'きゅう', 10: 'じゅう', 20: 'にじゅう', 30: 'さんじゅう', 40: 'よんじゅう',
+};
+function readingFor(la) {
+  switch (la.kind) {
+    case KIND.NUMBER:
+      return NUM_READ[la.value] || String(la.value);
+    case KIND.MINUS:
+      return la.value === -20 ? 'マイナスにじゅう' : 'マイナスじゅう';
+    case KIND.SET101:
+      return 'ひゃくいち';
+    case KIND.PASS:
+      return 'パス';
+    case KIND.SKIP:
+      return 'スキップ';
+    case KIND.DRAW2:
+      return 'つぎのひと、にまい';
+    case KIND.REVERSE:
+      return 'リバース';
+    case KIND.RESET:
+      return 'リセット';
+    case KIND.NOMINATE:
+      return 'しめい';
+    case 'ultimate':
+      return 'てふだまわし';
+    default:
+      return '';
+  }
+}
 
 export default function GameScreen({
   game,
@@ -32,6 +67,7 @@ export default function GameScreen({
   onHome,
 }) {
   const [nominateCardId, setNominateCardId] = useState(null);
+  const [confirmCard, setConfirmCard] = useState(null); // 2枚出し警告中のカード
   const [bumpKey, setBumpKey] = useState(0);
   const [displayTotal, setDisplayTotal] = useState(game.total);
   const [fx, setFx] = useState(null);
@@ -71,6 +107,7 @@ export default function GameScreen({
     if (la.kind === 'reset') sfx.reset();
     else if (SPECIAL_SOUND.includes(la.kind)) sfx.special();
     else sfx.card();
+    say(readingFor(la)); // 出したカードを読み上げ
     const msg = FX_MSG[la.kind];
     if (msg) {
       setFx(msg);
@@ -102,13 +139,24 @@ export default function GameScreen({
     }
   }
 
-  function handleCardClick(card) {
-    if (!bottomSelectable || !isPlayable(card, game.total)) return;
+  function doPlay(card) {
     if (card.kind === KIND.NOMINATE) {
       setNominateCardId(card.id);
       return;
     }
     onPlay(card.id);
+  }
+  function handleCardClick(card) {
+    if (!bottomSelectable || !isPlayable(card, game.total)) return;
+    // 2枚出しの1枚目で、特殊カードがあるのにプラスマイナス系を出そうとしたら警告
+    const forcedFirst = game.pendingPlays === 2 && game.turnPlaysRemaining === 2;
+    const isValue = VALUE_KINDS.includes(card.kind);
+    const hasSpecial = bottomPlayer.hand.some((c) => SPECIAL_KINDS.includes(c.kind));
+    if (forcedFirst && isValue && hasSpecial) {
+      setConfirmCard(card);
+      return;
+    }
+    doPlay(card);
   }
   function handleNominatePick(targetId) {
     const id = nominateCardId;
@@ -247,6 +295,36 @@ export default function GameScreen({
           onPick={handleNominatePick}
           onCancel={() => setNominateCardId(null)}
         />
+      )}
+
+      {confirmCard && (
+        <div className="overlay" onClick={() => setConfirmCard(null)}>
+          <div className="modal center" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 40 }}>⚠️</div>
+            <h2>2枚出しになります</h2>
+            <p style={{ fontSize: 14, lineHeight: 1.6 }}>
+              この札（プラス・マイナス系）を出すと、続けて<b>もう1枚</b>出すことになります。
+              <br />
+              <b>特殊カード</b>（スキップ・リバース・リセット・パス・指名・次2枚）を出せば
+              <b>1枚で済み</b>、2枚出す番は次の人へ移ります。
+            </p>
+            <div className="actions-bar mt">
+              <button
+                className="btn"
+                onClick={() => {
+                  const c = confirmCard;
+                  setConfirmCard(null);
+                  doPlay(c);
+                }}
+              >
+                このまま出す（2枚）
+              </button>
+              <button className="btn primary" onClick={() => setConfirmCard(null)}>
+                やめる
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

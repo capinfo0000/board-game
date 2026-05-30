@@ -54,6 +54,23 @@ function blip(freq, dur, type, gain) {
   tone(freq, 0, dur, { type, gain });
 }
 
+// 読み上げ（Web Speech API）。効果音と同じON/OFFに連動。
+export function say(text) {
+  if (!enabled || !text) return;
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ja-JP';
+    u.rate = 1.1;
+    u.pitch = 1.05;
+    u.volume = 0.95;
+    window.speechSynthesis.cancel(); // 連続再生のたまりを防ぐ
+    window.speechSynthesis.speak(u);
+  } catch (e) {
+    /* noop */
+  }
+}
+
 export const sfx = {
   card() {
     if (!enabled) return;
