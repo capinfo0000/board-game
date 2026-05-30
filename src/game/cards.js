@@ -23,10 +23,10 @@ export const DECK_SPEC = [
   { kind: KIND.SET101, label: '101', count: 4 },
   { kind: KIND.PASS, label: 'パス', count: 4 },
   { kind: KIND.SKIP, label: 'スキップ', count: 4 },
-  { kind: KIND.DRAW2, label: '次2枚', count: 4 },
+  { kind: KIND.DRAW2, label: 'ダブル', count: 4 },
   { kind: KIND.REVERSE, label: 'リバース', count: 4 },
   { kind: KIND.RESET, label: 'リセット', count: 4 },
-  { kind: KIND.NOMINATE, label: '指名', count: 4 },
+  { kind: KIND.NOMINATE, label: 'ショット', count: 4 },
 ];
 
 // 表示用のメタ情報（アイコン・色カテゴリ・説明）
@@ -36,10 +36,10 @@ export const CARD_META = {
   [KIND.SET101]: { icon: '⚡', category: 'danger', desc: '場の合計を一気に101にする' },
   [KIND.PASS]: { icon: '⏭', category: 'action', desc: '合計を変えずに手番を終える' },
   [KIND.SKIP]: { icon: '🚫', category: 'action', desc: '次の人を飛ばす' },
-  [KIND.DRAW2]: { icon: '➕➕', category: 'action', desc: '次の人は強制で2枚出す' },
+  [KIND.DRAW2]: { icon: '➕➕', category: 'action', desc: '次の人は強制で2枚出す（ダブル）' },
   [KIND.REVERSE]: { icon: '🔄', category: 'action', desc: '順番を逆にする' },
   [KIND.RESET]: { icon: '1️⃣', category: 'action', desc: '場の合計を1に戻す' },
-  [KIND.NOMINATE]: { icon: '🎯', category: 'action', desc: '次に出す人を指名する（自分以外）' },
+  [KIND.NOMINATE]: { icon: '🎯', category: 'action', desc: '次に出す人を指名する（ショット・自分以外）' },
 };
 
 let _idCounter = 0;

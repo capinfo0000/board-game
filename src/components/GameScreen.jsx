@@ -10,9 +10,9 @@ import NominateModal from './NominateModal.jsx';
 const FX_MSG = {
   skip: '🚫 スキップ！',
   reverse: '🔄 逆まわり！',
-  draw2: '➕➕ 次の人 2枚！',
+  draw2: '➕➕ ダブル！',
   reset: '1️⃣ 場をリセット！',
-  nominate: '🎯 指名！',
+  nominate: '🎯 ショット！',
   set101: '⚡ 101！',
   minus: '➖ ダウン！',
 };
@@ -37,13 +37,13 @@ function readingFor(la) {
     case KIND.SKIP:
       return 'スキップ';
     case KIND.DRAW2:
-      return 'つぎのひと、にまい';
+      return 'ダブル';
     case KIND.REVERSE:
       return 'リバース';
     case KIND.RESET:
       return 'リセット';
     case KIND.NOMINATE:
-      return 'しめい';
+      return 'ショット';
     case 'ultimate':
       return 'てふだまわし';
     default:
