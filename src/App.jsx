@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createGame, playCard, useUltimate } from './game/engine.js';
 import { chooseMove } from './game/ai.js';
-import { sfx } from './sound.js';
+import { sfx, say } from './sound.js';
 import SetupScreen from './components/SetupScreen.jsx';
 import GameScreen from './components/GameScreen.jsx';
 import GameOverModal from './components/GameOverModal.jsx';
@@ -91,6 +91,7 @@ export default function App() {
         bustTimerRef.current = setTimeout(() => setBustInfo(null), 1600);
       } else {
         // まだ続く：ラウンド終了（手札を配り直して次へ）でいったん区切る
+        say('バースト！');
         setRoundEndInfo(bust);
       }
     }
@@ -99,7 +100,13 @@ export default function App() {
   // --- ゲーム終了時の勝利ファンファーレ ---
   useEffect(() => {
     if (game?.phase === 'gameOver') {
-      const t = setTimeout(() => sfx.win(), 500);
+      const t = setTimeout(() => {
+        sfx.win();
+        const ln = game.loserId && game.players.find((p) => p.id === game.loserId)?.name;
+        const wn = game.winnerId && game.players.find((p) => p.id === game.winnerId)?.name;
+        if (ln) say(`${ln}の、まけ！`);
+        else if (wn) say(`${wn}の、かち！`);
+      }, 500);
       return () => clearTimeout(t);
     }
     return undefined;

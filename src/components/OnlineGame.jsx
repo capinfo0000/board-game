@@ -3,7 +3,7 @@ import { createGame, playCard, useUltimate } from '../game/engine.js';
 import { chooseMove } from '../game/ai.js';
 import { createHost, joinRoom } from '../net/peer.js';
 import { redactStateFor } from '../net/redact.js';
-import { sfx } from '../sound.js';
+import { sfx, say } from '../sound.js';
 import GameScreen from './GameScreen.jsx';
 import GameOverModal from './GameOverModal.jsx';
 import HelpModal from './HelpModal.jsx';
@@ -289,6 +289,7 @@ export default function OnlineGame({ onExit }) {
     if (b.seq !== bustSeqRef.current) {
       bustSeqRef.current = b.seq;
       sfx.bust();
+      if (game.phase !== 'gameOver') say('バースト！');
       setBustInfo(b);
       if (bustTimerRef.current) clearTimeout(bustTimerRef.current);
       bustTimerRef.current = setTimeout(() => setBustInfo(null), 1600);
@@ -297,7 +298,13 @@ export default function OnlineGame({ onExit }) {
 
   useEffect(() => {
     if (game?.phase === 'gameOver') {
-      const t = setTimeout(() => sfx.win(), 500);
+      const t = setTimeout(() => {
+        sfx.win();
+        const ln = game.loserId && game.players.find((p) => p.id === game.loserId)?.name;
+        const wn = game.winnerId && game.players.find((p) => p.id === game.winnerId)?.name;
+        if (ln) say(`${ln}の、まけ！`);
+        else if (wn) say(`${wn}の、かち！`);
+      }, 500);
       return () => clearTimeout(t);
     }
     return undefined;
