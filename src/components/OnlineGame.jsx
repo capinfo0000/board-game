@@ -3,6 +3,7 @@ import { createGame, playCard, useUltimate } from '../game/engine.js';
 import { chooseMove } from '../game/ai.js';
 import { createHost, joinRoom } from '../net/peer.js';
 import { redactStateFor } from '../net/redact.js';
+import { sfx } from '../sound.js';
 import GameScreen from './GameScreen.jsx';
 import GameOverModal from './GameOverModal.jsx';
 import HelpModal from './HelpModal.jsx';
@@ -287,11 +288,20 @@ export default function OnlineGame({ onExit }) {
     if (!b) return;
     if (b.seq !== bustSeqRef.current) {
       bustSeqRef.current = b.seq;
+      sfx.bust();
       setBustInfo(b);
       if (bustTimerRef.current) clearTimeout(bustTimerRef.current);
       bustTimerRef.current = setTimeout(() => setBustInfo(null), 1600);
     }
   }, [game?.lastBust?.seq]);
+
+  useEffect(() => {
+    if (game?.phase === 'gameOver') {
+      const t = setTimeout(() => sfx.win(), 500);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [game?.phase]);
 
   // ---------- 操作 ----------
   function handlePlay(cardId, choice) {
@@ -419,9 +429,7 @@ export default function OnlineGame({ onExit }) {
         <>
           <div className="card-panel center">
             <p className="small-muted" style={{ margin: 0 }}>ルームコード</p>
-            <div style={{ fontSize: 44, fontWeight: 900, letterSpacing: 8, color: 'var(--accent)' }}>
-              {code || '…'}
-            </div>
+            <div className="room-code">{code || '…'}</div>
             <p className="small-muted">このコードを相手に伝えてね</p>
           </div>
 

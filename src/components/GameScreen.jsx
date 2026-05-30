@@ -1,16 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { LIMIT, KIND } from '../game/constants.js';
 import { isPlayable, directionArrow } from '../game/engine.js';
+import { sfx, isSoundOn, setSoundOn } from '../sound.js';
 import CardView from './CardView.jsx';
 import PlayerSeats from './PlayerSeats.jsx';
 import LogPanel from './LogPanel.jsx';
 import PassScreen from './PassScreen.jsx';
 import NominateModal from './NominateModal.jsx';
 
+const FX_MSG = {
+  skip: '🚫 スキップ！',
+  reverse: '🔄 逆まわり！',
+  draw2: '➕➕ 次の人 2枚！',
+  reset: '1️⃣ 場をリセット！',
+  nominate: '🎯 指名！',
+  set101: '⚡ 101！',
+  minus: '➖ ダウン！',
+  ultimate: '🌀 手札まわし！',
+};
+const SPECIAL_SOUND = ['skip', 'reverse', 'draw2', 'nominate', 'set101', 'ultimate'];
+
 export default function GameScreen({
   game,
-  privacy, // true: 覗き見防止あり（複数人）/ false: 常に手札表示
-  viewerId, // privacy=false のとき、常に見せる人間プレイヤーのid
+  privacy,
+  viewerId,
   gateOpen,
   onReveal,
   onPlay,
@@ -20,16 +33,54 @@ export default function GameScreen({
 }) {
   const [nominateCardId, setNominateCardId] = useState(null);
   const [bumpKey, setBumpKey] = useState(0);
+  const [displayTotal, setDisplayTotal] = useState(game.total);
+  const [fx, setFx] = useState(null);
+  const [fxKey, setFxKey] = useState(0);
+  const [soundOn, setSoundOnState] = useState(isSoundOn());
 
-  // 合計が変わったらアニメーション
+  const totalRef = useRef(game.total);
+  const fxSeqRef = useRef(game.lastAction?.seq || 0);
+
+  // 合計のカウントアップ＆バウンド
   useEffect(() => {
+    const from = totalRef.current;
+    const to = game.total;
+    totalRef.current = to;
     setBumpKey((k) => k + 1);
+    if (from === to) {
+      setDisplayTotal(to);
+      return undefined;
+    }
+    const dur = 350;
+    const t0 = performance.now();
+    let raf;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      setDisplayTotal(Math.round(from + (to - from) * k));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
   }, [game.total]);
+
+  // カード／特殊エフェクト＋効果音
+  useEffect(() => {
+    const la = game.lastAction;
+    if (!la || la.seq === fxSeqRef.current) return;
+    fxSeqRef.current = la.seq;
+    if (la.kind === 'reset') sfx.reset();
+    else if (SPECIAL_SOUND.includes(la.kind)) sfx.special();
+    else sfx.card();
+    const msg = FX_MSG[la.kind];
+    if (msg) {
+      setFx(msg);
+      setFxKey((k) => k + 1);
+    }
+  }, [game.lastAction?.seq]);
 
   const current = game.players[game.currentPlayerIndex];
   const isHumanTurn = current && !current.isAI && !current.eliminated;
 
-  // 画面下部にどのプレイヤーの手札を出すか／表向きか／操作可能か を決める
   let bottomPlayer;
   let bottomFaceUp;
   let bottomSelectable;
@@ -52,37 +103,46 @@ export default function GameScreen({
   }
 
   function handleCardClick(card) {
-    if (!bottomSelectable) return;
-    if (!isPlayable(card, game.total)) return;
+    if (!bottomSelectable || !isPlayable(card, game.total)) return;
     if (card.kind === KIND.NOMINATE) {
       setNominateCardId(card.id);
       return;
     }
     onPlay(card.id);
   }
-
   function handleNominatePick(targetId) {
     const id = nominateCardId;
     setNominateCardId(null);
     onPlay(id, { targetId });
   }
+  function toggleSound() {
+    const v = !soundOn;
+    setSoundOn(v);
+    setSoundOnState(v);
+  }
 
-  const hot = game.total >= LIMIT - 10;
+  const hot = game.total >= LIMIT - 15;
+  const pct = Math.max(0, Math.min(100, (game.total / LIMIT) * 100));
 
-  // 手番バナー
+  // 場に出た直前のカード（lastActionから復元。必殺技は除く）
+  const la = game.lastAction;
+  const pileCard =
+    la && la.kind && la.kind !== 'ultimate'
+      ? { id: 'pile', kind: la.kind, value: la.value ?? 0, label: la.label ?? '' }
+      : null;
+
   let banner = null;
   if (current?.isAI) {
     banner = <span>🤖 {current.name} が考えています…</span>;
   } else if (bottomSelectable) {
-    if (game.pendingPlays === 2) {
-      banner = (
+    banner =
+      game.pendingPlays === 2 ? (
         <span className="warn">
-          {current.name} の番：次の人2枚！あと {game.turnPlaysRemaining} 枚出してください
+          {current.name} の番：あと {game.turnPlaysRemaining} 枚 出してください
         </span>
+      ) : (
+        <span>{current.name} の番！ カードを選んでね</span>
       );
-    } else {
-      banner = <span>{current.name} の番！カードを選んでね</span>;
-    }
   } else if (!privacy && current && !current.isAI) {
     banner = <span>{current.name} の番</span>;
   }
@@ -92,30 +152,55 @@ export default function GameScreen({
   return (
     <div className="game">
       <div className="topbar">
-        <button className="icon-btn" onClick={onHome} title="メンバー編集へ戻る">
+        <button className="icon-btn" onClick={onHome} title="やめる／戻る">
           🏠
         </button>
-        <div className="small-muted">ノイ NEU</div>
-        <button className="icon-btn" onClick={onOpenHelp} title="遊び方">
-          ❓
-        </button>
+        <div className="brand">ノイ</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="icon-btn" onClick={toggleSound} title="効果音 ON/OFF">
+            {soundOn ? '🔊' : '🔇'}
+          </button>
+          <button className="icon-btn" onClick={onOpenHelp} title="あそびかた">
+            ❓
+          </button>
+        </div>
       </div>
 
       <PlayerSeats players={game.players} currentIndex={game.currentPlayerIndex} />
 
       <div className="board">
-        <div className="total-label">場の合計</div>
-        <div key={bumpKey} className={`total bump${hot ? ' hot' : ''}`}>
-          {game.total}
-          <span className="lim"> / {LIMIT}</span>
+        {fx && (
+          <div className="fx-burst" key={fxKey}>
+            {fx}
+          </div>
+        )}
+        <div className="play-area">
+          <div className="pile">
+            {pileCard ? (
+              <div className="pile-pop" key={la.seq}>
+                <CardView card={pileCard} playable />
+              </div>
+            ) : (
+              <div className="pile-empty" />
+            )}
+          </div>
+          <div className="total-block">
+            <div className="total-label">場の合計</div>
+            <div key={bumpKey} className={`total bump${hot ? ' hot' : ''}`}>
+              {displayTotal}
+              <span className="lim"> / {LIMIT}</span>
+            </div>
+            <div className="gauge">
+              <div className={`gauge-fill${hot ? ' warn' : ''}`} style={{ width: `${pct}%` }} />
+            </div>
+          </div>
         </div>
         <div className="dir">
-          順番 {directionArrow(game)} {game.direction === 1 ? '時計回り' : '反時計回り'}
+          {directionArrow(game)} {game.direction === 1 ? '時計回り' : '反時計回り'}
         </div>
         <div className="deckinfo" title="山札が尽きたら捨て札をシャッフルして山札に戻します">
-          🂠 山札 <b>{game.drawPile.length}</b> 枚 ・ 🗑 捨て札 {game.discardPile.length} 枚
+          🂠 山札 <b>{game.drawPile.length}</b> ・ 🗑 {game.discardPile.length}
         </div>
-        <div className="lastplay">{game.log.length ? game.log[game.log.length - 1].text : ''}</div>
       </div>
 
       <LogPanel log={game.log} />

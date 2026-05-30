@@ -373,7 +373,7 @@ export function playCard(prev, playerId, cardId, choice = null) {
   player.hand.splice(cardIdx, 1);
   state.discardPile.push(card);
   applyCardEffect(state, player, card, choice);
-  state.lastAction = { playerId, cardId, kind: card.kind, label: card.label };
+  state.lastAction = { playerId, cardId, kind: card.kind, label: card.label, value: card.value, seq: (prev.lastAction?.seq || 0) + 1 };
   addLog(state, buildPlayLogText(state, player, card, choice));
 
   // --- 「次の人2枚」を受けたターンの処理 ---
@@ -438,7 +438,7 @@ export function useUltimate(prev, playerId) {
   }
   player.ultimateUsed = true;
   state.lastDrawn = [];
-  state.lastAction = { playerId, kind: 'ultimate' };
+  state.lastAction = { playerId, kind: 'ultimate', seq: (prev.lastAction?.seq || 0) + 1 };
   addLog(state, `🔄 ${player.name} が手札まわし！ 全員の手札を右どなりへ回す（手番終了）`);
 
   // 発動したら手番終了

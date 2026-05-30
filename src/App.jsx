@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createGame, playCard, useUltimate } from './game/engine.js';
 import { chooseMove } from './game/ai.js';
+import { sfx } from './sound.js';
 import SetupScreen from './components/SetupScreen.jsx';
 import GameScreen from './components/GameScreen.jsx';
 import GameOverModal from './components/GameOverModal.jsx';
@@ -82,6 +83,7 @@ export default function App() {
     if (!bust) return;
     if (bust.seq !== prevBustSeqRef.current) {
       prevBustSeqRef.current = bust.seq;
+      sfx.bust();
       if (game.phase === 'gameOver') {
         // 最後のバースト：フラッシュ演出（このあと結果画面）
         setBustInfo(bust);
@@ -93,6 +95,15 @@ export default function App() {
       }
     }
   }, [game?.lastBust?.seq]);
+
+  // --- ゲーム終了時の勝利ファンファーレ ---
+  useEffect(() => {
+    if (game?.phase === 'gameOver') {
+      const t = setTimeout(() => sfx.win(), 500);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [game?.phase]);
 
   // --- 新しい手番になったら、人間かつ覗き見防止が必要ならゲートを開く ---
   useEffect(() => {
