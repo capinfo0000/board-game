@@ -409,15 +409,15 @@ button {
 /* ---------- 円卓レイアウト ---------- */
 .table {
   position: relative;
-  height: clamp(240px, 40vh, 330px);
+  height: clamp(264px, 43vh, 350px);
   margin: 4px 0 2px;
 }
 .felt {
   position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 8%;
-  bottom: 8%;
+  left: 13%;
+  right: 13%;
+  top: 14%;
+  bottom: 14%;
   border-radius: 50%;
   background: radial-gradient(circle at 50% 38%, var(--felt) 0%, var(--felt-d) 100%);
   display: flex;

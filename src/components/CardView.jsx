@@ -31,18 +31,9 @@ export default function CardView({ card, faceDown, small, playable, selectable, 
     tag = '101';
     center = <div className="big">101</div>;
   } else {
+    // 特殊カード（パス・スキップ・ダブル・リバース・リセット・ショット）は中央を文字だけに
     tag = meta.icon;
-    // リバース・スキップ・ダブルは中央を文字だけに
-    const textOnly =
-      card.kind === KIND.REVERSE || card.kind === KIND.SKIP || card.kind === KIND.DRAW2;
-    center = textOnly ? (
-      <div className="cname-only">{card.label}</div>
-    ) : (
-      <>
-        <div className="ic-big">{meta.icon}</div>
-        <div className="cname">{card.label}</div>
-      </>
-    );
+    center = <div className="cname-only">{card.label}</div>;
   }
 
   return (

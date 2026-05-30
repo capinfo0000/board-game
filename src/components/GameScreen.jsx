@@ -166,15 +166,15 @@ export default function GameScreen({
 
   const opponents = game.players.filter((p) => !bottomPlayer || p.id !== bottomPlayer.id);
 
-  // 円卓の「内側」に沿って相手を配置（下側は自分の席）。枠線にかぶらないよう内寄せ
+  // 円卓の「外側」のリングにプレイヤー(動物アイコン)を配置（下側は自分の席）
   function seatPos(j, m) {
     const ang = ((180 + ((j + 1) * 180) / (m + 1)) * Math.PI) / 180;
-    const rx = 37;
-    const ry = 33;
+    const rx = 46;
+    const ry = 45;
     let left = 50 + rx * Math.cos(ang);
     let top = 50 + ry * Math.sin(ang);
-    left = Math.max(15, Math.min(85, left));
-    top = Math.max(14, Math.min(52, top));
+    left = Math.max(9, Math.min(91, left)); // 見切れ防止
+    top = Math.max(7, Math.min(58, top));
     return { left: `${left}%`, top: `${top}%` };
   }
 

@@ -17,8 +17,8 @@ export const DECK_SPEC = [
   { kind: KIND.NUMBER, value: 30, label: 'Q', count: 4 },
   { kind: KIND.NUMBER, value: 40, label: 'K', count: 4 },
   // マイナス
-  { kind: KIND.MINUS, value: -10, label: '−10', count: 4 },
-  { kind: KIND.MINUS, value: -20, label: '−20', count: 4 },
+  { kind: KIND.MINUS, value: -10, label: '-10', count: 4 },
+  { kind: KIND.MINUS, value: -20, label: '-20', count: 4 },
   // 特殊
   { kind: KIND.SET101, label: '101', count: 4 },
   { kind: KIND.PASS, label: 'パス', count: 4 },
