@@ -167,6 +167,14 @@ export default function GameScreen({
 
   const opponents = game.players.filter((p) => !bottomPlayer || p.id !== bottomPlayer.id);
 
+  // 円卓の上側〜左右に相手を配置（下側は自分の席）
+  function seatPos(j, m) {
+    const ang = ((180 + ((j + 1) * 180) / (m + 1)) * Math.PI) / 180;
+    const rx = 47;
+    const ry = 46;
+    return { left: `${50 + rx * Math.cos(ang)}%`, top: `${50 + ry * Math.sin(ang)}%` };
+  }
+
   function doPlay(card) {
     if (card.kind === KIND.NOMINATE) {
       setNominateCardId(card.id);
@@ -240,47 +248,49 @@ export default function GameScreen({
         </div>
       </div>
 
-      {/* 相手プレイヤー（裏向き手札で枚数が見える） */}
-      <div className="opponents">
-        {opponents.map((p) => (
-          <Opponent key={p.id} p={p} active={current && p.id === current.id && !p.eliminated} />
-        ))}
-      </div>
-
-      {/* 中央の卓：場の合計 */}
-      <div className="board">
-        {fx && (
-          <div className="fx-burst" key={fxKey}>
-            {fx}
-          </div>
-        )}
-        <div className="play-area">
-          <div className="pile">
-            {pileCard ? (
-              <div className="pile-pop" key={la.seq}>
-                <CardView card={pileCard} playable />
+      {/* 円卓：中央に場の合計、まわりにプレイヤー */}
+      <div className="table">
+        <div className="felt">
+          {fx && (
+            <div className="fx-burst" key={fxKey}>
+              {fx}
+            </div>
+          )}
+          <div className="felt-center">
+            <div className="play-area">
+              <div className="pile">
+                {pileCard ? (
+                  <div className="pile-pop" key={la.seq}>
+                    <CardView card={pileCard} playable small />
+                  </div>
+                ) : (
+                  <div className="pile-empty" />
+                )}
               </div>
-            ) : (
-              <div className="pile-empty" />
-            )}
-          </div>
-          <div className="total-block">
-            <div className="total-label">場の合計</div>
-            <div key={bumpKey} className={`total bump${hot ? ' hot' : ''}`}>
-              {displayTotal}
-              <span className="lim"> / {LIMIT}</span>
+              <div className="total-block">
+                <div className="total-label">場の合計</div>
+                <div key={bumpKey} className={`total bump${hot ? ' hot' : ''}`}>
+                  {displayTotal}
+                  <span className="lim"> / {LIMIT}</span>
+                </div>
+                <div className="gauge">
+                  <div className={`gauge-fill${hot ? ' warn' : ''}`} style={{ width: `${pct}%` }} />
+                </div>
+              </div>
             </div>
-            <div className="gauge">
-              <div className={`gauge-fill${hot ? ' warn' : ''}`} style={{ width: `${pct}%` }} />
+            <div className="dir">
+              {directionArrow(game)} {game.direction === 1 ? '時計回り' : '反時計回り'}
+            </div>
+            <div className="deckinfo" title="山札が尽きたら捨て札をシャッフルして山札に戻します">
+              🂠 <b>{game.drawPile.length}</b> ・ 🗑 {game.discardPile.length}
             </div>
           </div>
         </div>
-        <div className="dir">
-          {directionArrow(game)} {game.direction === 1 ? '時計回り' : '反時計回り'}
-        </div>
-        <div className="deckinfo" title="山札が尽きたら捨て札をシャッフルして山札に戻します">
-          🂠 山札 <b>{game.drawPile.length}</b> ・ 🗑 {game.discardPile.length}
-        </div>
+        {opponents.map((p, j) => (
+          <div className="table-seat" key={p.id} style={seatPos(j, opponents.length)}>
+            <Opponent p={p} active={current && p.id === current.id && !p.eliminated} />
+          </div>
+        ))}
       </div>
 
       <LogPanel log={game.log} />
