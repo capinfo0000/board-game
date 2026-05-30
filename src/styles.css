@@ -844,6 +844,15 @@ button {
   font-size: 9px;
   margin-top: 1px;
 }
+.card .cname-only {
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 1.1;
+}
+.card.sm .cname-only {
+  font-size: 12px;
+}
 .card .corner {
   position: absolute;
   font-size: 13px;
