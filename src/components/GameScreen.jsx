@@ -107,7 +107,12 @@ export default function GameScreen({
     if (la.kind === 'reset') sfx.reset();
     else if (SPECIAL_SOUND.includes(la.kind)) sfx.special();
     else sfx.card();
-    say(la.kind === 'ultimate' ? 'てふだこうかん' : readingFor(la));
+    if (la.kind === 'ultimate') {
+      const actor = game.players.find((p) => p.id === la.playerId)?.name || '';
+      say(`${actor}が手札こうかんを発動。${la.targetName || ''}と手札こうかんしました`);
+    } else {
+      say(readingFor(la));
+    }
     const msg = FX_MSG[la.kind];
     if (msg) {
       setFx(msg);
