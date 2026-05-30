@@ -299,6 +299,7 @@ export default function GameScreen({
                   <div className="seat-ava">{p.avatar}</div>
                   {!p.ultimateUsed && !p.eliminated && <span className="ult-badge">🔁</span>}
                 </div>
+                <div className="opp-nm">{p.name}</div>
               </div>
               <div
                 className={`table-info${active ? ' active' : ''}${p.eliminated ? ' eliminated' : ''}`}
@@ -310,7 +311,6 @@ export default function GameScreen({
                   ))}
                   <span className="opp-count">{p.hand.length}</span>
                 </div>
-                <div className="opp-nm">{p.name}</div>
                 <div className="opp-lives">{p.eliminated ? '☠️' : '❤'.repeat(p.lives)}</div>
               </div>
             </React.Fragment>

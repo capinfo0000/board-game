@@ -477,7 +477,16 @@ button {
 .table-ava {
   position: absolute;
   transform: translate(-50%, -50%);
+  width: 62px;
+  text-align: center;
   z-index: 3;
+}
+.table-ava .seat-ava-wrap {
+  margin: 0 auto;
+}
+.table-ava .opp-nm {
+  margin-top: 2px;
+  max-width: 62px;
 }
 .table-info {
   position: absolute;
