@@ -128,6 +128,16 @@ test('詰みでも手札まわしが残っていればまだ負けではない�
   assert.equal(g.loserId, b.id);
 });
 
+test('手札まわしは手番を終えず、進行方向と逆に回す', () => {
+  let g = createGame({ players: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] });
+  const aId = getCurrentPlayer(g).id;
+  const p1Before = g.players[1].hand.map((c) => c.id).join(',');
+  g = useUltimate(g, aId); // direction +1 → 左回り（i の手札が i-1 へ）
+  assert.equal(getCurrentPlayer(g).id, aId, '手番は同じプレイヤーのまま（出さないといけない）');
+  assert.equal(g.players.find((p) => p.id === aId).ultimateUsed, true);
+  assert.equal(g.players[0].hand.map((c) => c.id).join(','), p1Before, 'p0 が p1 の手札を受け取る');
+});
+
 test('101カードは場を101にする', () => {
   let g = createGame({ players: [{ name: 'A' }, { name: 'B' }] });
   const me = getCurrentPlayer(g);

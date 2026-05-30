@@ -285,7 +285,7 @@ export default function OnlineGame({ onExit }) {
     return () => {
       if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     };
-  }, [role, game?.turnId, game?.turnPlaysRemaining, game?.phase, speaking]);
+  }, [role, game?.turnId, game?.turnPlaysRemaining, game?.lastAction?.seq, game?.phase, speaking]);
 
   // ---------- 共通：バースト演出 ----------
   useEffect(() => {

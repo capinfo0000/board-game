@@ -149,7 +149,15 @@ export default function App() {
     return () => {
       if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     };
-  }, [game?.turnId, game?.turnPlaysRemaining, game?.phase, reviewPlayerId, roundEndInfo, speaking]);
+  }, [
+    game?.turnId,
+    game?.turnPlaysRemaining,
+    game?.lastAction?.seq,
+    game?.phase,
+    reviewPlayerId,
+    roundEndInfo,
+    speaking,
+  ]);
 
   // --- 手番終了後に「引いたカードの確認」を挟むか判定 ---
   function maybeReview(prev, next, actingId) {

@@ -445,20 +445,27 @@ export function useUltimate(prev, playerId) {
 
   const living = state.players.filter((p) => !p.eliminated);
   if (living.length >= 2) {
-    // 右回転：席順で次の生存者へ手札を渡す
+    // 進行方向と逆まわりに手札を回す（右進行なら左へ／左進行なら右へ）
     const hands = living.map((p) => p.hand);
     const n = living.length;
+    const shift = state.direction === 1 ? -1 : 1;
     for (let i = 0; i < n; i += 1) {
-      living[(i + 1) % n].hand = hands[i];
+      living[(i + shift + n) % n].hand = hands[i];
     }
   }
   player.ultimateUsed = true;
   state.lastDrawn = [];
   state.lastAction = { playerId, kind: 'ultimate', seq: (prev.lastAction?.seq || 0) + 1 };
-  addLog(state, `🔄 ${player.name} が手札まわし！ 全員の手札を右どなりへ回す（手番終了）`);
+  addLog(
+    state,
+    `🔄 ${player.name} が手札まわし！ 全員の手札を${state.direction === 1 ? '左' : '右'}どなりへ回す`,
+  );
 
-  // 発動したら手番終了
-  advanceTurn(state);
+  // 手番は終わらない。続けてカードを出す（出せなければ＝手札まわしも使い切ったのでバースト）
+  const playable = getPlayableCards(player, state.total, state.pendingPlays);
+  if (playable.length === 0) {
+    doBust(state, player);
+  }
   return state;
 }
 

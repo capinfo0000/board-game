@@ -93,6 +93,7 @@ export default function GameScreen({
   const [fxKey, setFxKey] = useState(0);
   const [rotateKey, setRotateKey] = useState(0);
   const [rotating, setRotating] = useState(false);
+  const [rotateLeft, setRotateLeft] = useState(false);
   const [soundOn, setSoundOnState] = useState(isSoundOn());
   const [speaking, setSpeaking] = useState(isSpeaking());
 
@@ -132,6 +133,7 @@ export default function GameScreen({
     else sfx.card();
     say(readingFor(la));
     if (la.kind === 'ultimate') {
+      setRotateLeft(game.direction === 1); // 右進行なら手札は左へ回る
       setRotating(true);
       setRotateKey((k) => k + 1);
       if (rotTimerRef.current) clearTimeout(rotTimerRef.current);
@@ -354,7 +356,7 @@ export default function GameScreen({
             className="btn"
             disabled={ultDisabled}
             onClick={onUltimate}
-            title="全員の手札を右どなりへ回す（1人1回・使うと手番終了）"
+            title="全員の手札を進行方向と逆まわりに回す（1人1回・回した後にカードを出す）"
           >
             🔄 手札まわし{current && current.ultimateUsed ? '（使用済）' : ''}
           </button>
@@ -428,14 +430,18 @@ export default function GameScreen({
             {game.players.map((p, i) => (
               <React.Fragment key={p.id}>
                 <div className="rotate-ava">
-                  <span className="rotate-hand">🂠</span>
+                  <span className={`rotate-hand${rotateLeft ? ' left' : ''}`}>🂠</span>
                   {p.avatar}
                 </div>
-                {i < game.players.length - 1 && <span className="rotate-arrow">➡️</span>}
+                {i < game.players.length - 1 && (
+                  <span className="rotate-arrow">{rotateLeft ? '⬅️' : '➡️'}</span>
+                )}
               </React.Fragment>
             ))}
           </div>
-          <div className="rotate-sub">手札がみんな右どなりへ ▶</div>
+          <div className="rotate-sub">
+            手札がみんな{rotateLeft ? '左' : '右'}どなりへ {rotateLeft ? '◀' : '▶'}
+          </div>
         </div>
       )}
     </div>
