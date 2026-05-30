@@ -33,9 +33,31 @@ export default function OnlineGame({ onExit }) {
   const [myId, setMyId] = useState(null);
   const [bustInfo, setBustInfo] = useState(null);
   const [speaking, setSpeaking] = useState(isSpeaking());
+  const [secLeft, setSecLeft] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => onSpeaking(setSpeaking), []);
+
+  // 手番のカウントダウン表示（30秒＋5秒）。実際の自動進行はホストが行う
+  useEffect(() => {
+    if (!game || game.phase !== 'playing') {
+      setSecLeft(null);
+      return undefined;
+    }
+    const cur = game.players[game.currentPlayerIndex];
+    if (!cur || cur.isAI || cur.eliminated) {
+      setSecLeft(null);
+      return undefined;
+    }
+    let left = 35;
+    setSecLeft(left);
+    const id = setInterval(() => {
+      left -= 1;
+      setSecLeft(Math.max(0, left));
+      if (left <= 0) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [game?.turnId, game?.turnPlaysRemaining, game?.lastAction?.seq, game?.phase]);
 
   const hostCtrlRef = useRef(null);
   const clientCtrlRef = useRef(null);
@@ -276,7 +298,7 @@ export default function OnlineGame({ onExit }) {
     if (speaking) return undefined; // 読み上げ中は待つ
     const cur = game.players[game.currentPlayerIndex];
     if (!cur || cur.eliminated) return undefined;
-    const delay = cur.isAI ? 800 + Math.random() * 600 : 30000; // 人間は30秒で自動
+    const delay = cur.isAI ? 800 + Math.random() * 600 : 35000; // 人間は30秒＋5秒で自動
     aiTimerRef.current = setTimeout(() => {
       if (isSpeaking()) return;
       const mv = chooseMove(gameRef.current);
@@ -349,6 +371,7 @@ export default function OnlineGame({ onExit }) {
           onForfeit={handleForfeit}
           onOpenHelp={() => setShowHelp(true)}
           onHome={leaveRoom}
+          secLeft={secLeft}
         />
         <BustEffect bust={bustInfo} />
         {game.phase === 'gameOver' && (

@@ -790,11 +790,31 @@ button {
 .hand-area {
   margin-top: 8px;
 }
+.turn-timer {
+  text-align: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--gold-l);
+  letter-spacing: 1px;
+}
+.turn-timer.urgent {
+  color: #ff7a5c;
+  animation: timerPulse 1s ease-in-out infinite;
+}
+@keyframes timerPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
 .turn-banner {
   text-align: center;
   font-weight: 800;
   font-size: 16px;
-  margin: 6px 0;
+  margin: 4px 0 6px;
   min-height: 24px;
   color: var(--gold-l);
   letter-spacing: 1px;
@@ -1083,6 +1103,17 @@ button {
   flex: 0 0 70px;
   font-weight: 900;
   color: var(--gold);
+}
+.help-row span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.help-count {
+  flex: 0 0 auto;
+  color: var(--gold-l);
+  font-weight: 800;
+  white-space: nowrap;
+  font-size: 12px;
 }
 .log-panel {
   background: rgba(0, 0, 0, 0.28);

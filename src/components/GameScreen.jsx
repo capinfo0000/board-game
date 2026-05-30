@@ -63,6 +63,7 @@ export default function GameScreen({
   onForfeit,
   onOpenHelp,
   onHome,
+  secLeft,
 }) {
   const [nominateCardId, setNominateCardId] = useState(null);
   const [confirmCard, setConfirmCard] = useState(null);
@@ -338,6 +339,9 @@ export default function GameScreen({
               <span className="small-muted">CPU・{DIFFICULTY_LABEL[bottomPlayer.difficulty]}</span>
             )}
           </div>
+        )}
+        {typeof secLeft === 'number' && (
+          <div className={`turn-timer${secLeft <= 5 ? ' urgent' : ''}`}>⏱ 残り {secLeft} 秒</div>
         )}
         <div className="turn-banner">{banner}</div>
         <div className="hand">

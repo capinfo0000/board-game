@@ -37,6 +37,7 @@ export default function App() {
   const [bustInfo, setBustInfo] = useState(null); // バースト演出（ゲーム終了時のフラッシュ）
   const [roundEndInfo, setRoundEndInfo] = useState(null); // ラウンド終了（バーストで区切り）
   const [speaking, setSpeaking] = useState(isSpeaking());
+  const [secLeft, setSecLeft] = useState(null); // 手番の残り時間（30+5秒）
   const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => onSpeaking(setSpeaking), []);
@@ -179,6 +180,33 @@ export default function App() {
     }
   }
 
+  // --- 手番の制限時間（30秒＋ラスト5秒＝計35秒）。0でAIが代わりに自動プレイ ---
+  useEffect(() => {
+    if (!game || game.phase !== 'playing' || gateOpen || reviewPlayerId || roundEndInfo) {
+      setSecLeft(null);
+      return undefined;
+    }
+    const cur = game.players[game.currentPlayerIndex];
+    if (!cur || cur.isAI || cur.eliminated) {
+      setSecLeft(null);
+      return undefined;
+    }
+    let left = 35;
+    setSecLeft(left);
+    const id = setInterval(() => {
+      left -= 1;
+      setSecLeft(Math.max(0, left));
+      if (left <= 0) {
+        clearInterval(id);
+        const move = chooseMove(game);
+        if (!move) setGame((g) => forfeit(g, cur.id));
+        else if (move.type === 'ultimate') setGame((g) => useUltimate(g, cur.id, move.targetId));
+        else setGame((g) => playCard(g, cur.id, move.cardId, move.choice ?? null));
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [game?.turnId, game?.turnPlaysRemaining, game?.lastAction?.seq, game?.phase, gateOpen, reviewPlayerId, roundEndInfo]);
+
   // --- 人間の操作 ---
   function handlePlay(cardId, choice) {
     const actingId = game.players[game.currentPlayerIndex].id;
@@ -250,6 +278,7 @@ export default function App() {
         onForfeit={handleForfeit}
         onOpenHelp={() => setShowHelp(true)}
         onHome={goHome}
+        secLeft={secLeft}
       />
       {reviewPlayer && game.phase === 'playing' && (
         <HandoffReview
