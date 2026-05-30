@@ -171,6 +171,15 @@ test('次2枚を受けて数字カードを出すと2枚必要・引けるのは
   assert.equal(bAfter.hand.length, 4, '2枚出して1枚しか引けないので手札-1');
 });
 
+test('次の人2枚を受けた番では次の人2枚カードは出せない', () => {
+  const draw2 = { id: 'd', kind: KIND.DRAW2, value: 0, label: '次2枚' };
+  assert.equal(isPlayable(draw2, 0, 1), true, '通常の番なら出せる');
+  assert.equal(isPlayable(draw2, 0, 2), false, '2枚出しの番では出せない');
+  // スキップ等ほかの特殊は2枚出しの番でも出せる
+  const skip = { id: 's', kind: KIND.SKIP, value: 0, label: 'スキップ' };
+  assert.equal(isPlayable(skip, 0, 2), true);
+});
+
 test('リセットカードは場を1にする', () => {
   let g = createGame({ players: [{ name: 'A' }, { name: 'B' }] });
   g.total = 90;

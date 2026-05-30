@@ -69,14 +69,14 @@ function chooseBest(state, playable, jitter) {
 // 必殺技を使うべきか（手札が詰まっているとき）
 function shouldUseUltimate(state, player, threshold) {
   if (player.ultimateUsed) return false;
-  const playable = getPlayableCards(player, state.total);
+  const playable = getPlayableCards(player, state.total, state.pendingPlays);
   const unplayable = player.hand.length - playable.length;
   return unplayable >= threshold;
 }
 
 export function chooseMove(state) {
   const player = getCurrentPlayer(state);
-  const playable = getPlayableCards(player, state.total);
+  const playable = getPlayableCards(player, state.total, state.pendingPlays);
   if (playable.length === 0) {
     // 出せない。手札まわしが残っていれば使って粘る（バースト回避）
     if (!player.ultimateUsed) return { type: 'ultimate' };
@@ -107,7 +107,7 @@ function buildMove(state, player, card) {
     const targetId = pickNominateTarget(state, player.id) ?? null;
     if (!targetId) {
       // 指名先がいない場合は別の札を選ぶ
-      const others = getPlayableCards(player, state.total).filter((c) => c.kind !== KIND.NOMINATE);
+      const others = getPlayableCards(player, state.total, state.pendingPlays).filter((c) => c.kind !== KIND.NOMINATE);
       if (others.length) return { type: 'play', cardId: others[0].id };
     }
     return { type: 'play', cardId: card.id, choice: { targetId } };

@@ -44,14 +44,16 @@ function addLog(state, text) {
 
 // ---- 判定系 ----
 
-export function isPlayable(card, total) {
+export function isPlayable(card, total, pendingPlays = 1) {
+  // 「次の人2枚」を受けている番（2枚出し）では、次の人2枚カードは出せない
+  if (card.kind === KIND.DRAW2 && pendingPlays === 2) return false;
   if (card.kind === KIND.NUMBER) return total + card.value <= LIMIT;
   // マイナス（0止まり）・101・リセット・各アクションは常に出せる
   return true;
 }
 
-export function getPlayableCards(player, total) {
-  return player.hand.filter((c) => isPlayable(c, total));
+export function getPlayableCards(player, total, pendingPlays = 1) {
+  return player.hand.filter((c) => isPlayable(c, total, pendingPlays));
 }
 
 export function livingPlayers(state) {
@@ -187,7 +189,7 @@ function settleTurnStart(state) {
       );
       continue;
     }
-    const playable = getPlayableCards(player, state.total);
+    const playable = getPlayableCards(player, state.total, state.pendingPlays);
     if (playable.length === 0 && player.ultimateUsed) {
       // 出せる札がなく、手札まわしも使い切っている → バースト
       doBust(state, player);
@@ -361,7 +363,7 @@ export function playCard(prev, playerId, cardId, choice = null) {
   if (cardIdx < 0) return prev;
   const card = player.hand[cardIdx];
 
-  if (!isPlayable(card, state.total)) return prev; // 出せない札
+  if (!isPlayable(card, state.total, state.pendingPlays)) return prev; // 出せない札
   if (card.kind === KIND.NOMINATE) {
     // 指名先は自分以外の生存者でなければならない
     const target = state.players.find(
@@ -399,7 +401,7 @@ export function playCard(prev, playerId, cardId, choice = null) {
 
   if (state.turnPlaysRemaining > 0) {
     // 2枚目を出す必要がある（※ここでは補充しない＝2枚出して引けるのは1枚）
-    const playable = getPlayableCards(player, state.total);
+    const playable = getPlayableCards(player, state.total, state.pendingPlays);
     if (playable.length === 0 && player.ultimateUsed) {
       doBust(state, player);
     }
@@ -427,7 +429,7 @@ export function forfeit(prev, playerId) {
   const player = getCurrentPlayer(state);
   if (!player || player.id !== playerId) return prev;
   // 出せる札があるなら投了はできない（詰んでいる時だけ）
-  if (getPlayableCards(player, state.total).length > 0) return prev;
+  if (getPlayableCards(player, state.total, state.pendingPlays).length > 0) return prev;
   doBust(state, player);
   return state;
 }

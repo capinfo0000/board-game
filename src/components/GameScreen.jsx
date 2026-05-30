@@ -190,10 +190,12 @@ export default function GameScreen({
     onPlay(card.id);
   }
   function handleCardClick(card) {
-    if (!bottomSelectable || !isPlayable(card, game.total)) return;
+    if (!bottomSelectable || !isPlayable(card, game.total, game.pendingPlays)) return;
     const forcedFirst = game.pendingPlays === 2 && game.turnPlaysRemaining === 2;
     const isValue = VALUE_KINDS.includes(card.kind);
-    const hasSpecial = bottomPlayer.hand.some((c) => SPECIAL_KINDS.includes(c.kind));
+    const hasSpecial = bottomPlayer.hand.some(
+      (c) => SPECIAL_KINDS.includes(c.kind) && isPlayable(c, game.total, game.pendingPlays),
+    );
     if (forcedFirst && isValue && hasSpecial) {
       setConfirmCard(card);
       return;
@@ -248,7 +250,7 @@ export default function GameScreen({
     !current.eliminated &&
     game.phase === 'playing' &&
     (privacy ? !gateOpen : true);
-  const noPlayable = bottomPlayer ? bottomPlayer.hand.every((c) => !isPlayable(c, game.total)) : false;
+  const noPlayable = bottomPlayer ? bottomPlayer.hand.every((c) => !isPlayable(c, game.total, game.pendingPlays)) : false;
   const stuck = myTurnActive && noPlayable && current && !current.ultimateUsed;
 
   return (
@@ -337,8 +339,8 @@ export default function GameScreen({
                   <CardView
                     key={card.id}
                     card={card}
-                    playable={isPlayable(card, game.total)}
-                    selectable={bottomSelectable && isPlayable(card, game.total)}
+                    playable={isPlayable(card, game.total, game.pendingPlays)}
+                    selectable={bottomSelectable && isPlayable(card, game.total, game.pendingPlays)}
                     onClick={() => handleCardClick(card)}
                   />
                 ) : (
