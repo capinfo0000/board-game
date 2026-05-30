@@ -409,8 +409,8 @@ button {
 /* ---------- 円卓レイアウト ---------- */
 .table {
   position: relative;
-  height: clamp(264px, 44vh, 360px);
-  margin: 6px 0 2px;
+  height: clamp(240px, 40vh, 330px);
+  margin: 4px 0 2px;
 }
 .felt {
   position: absolute;
@@ -756,7 +756,7 @@ button {
 
 /* ---------- 手札 ---------- */
 .hand-area {
-  margin-top: auto;
+  margin-top: 8px;
 }
 .turn-banner {
   text-align: center;
