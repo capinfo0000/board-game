@@ -634,7 +634,7 @@ button {
   inset: 0;
 }
 .total-block {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
 }
 .total-label {
@@ -661,11 +661,13 @@ button {
   text-shadow: 0 0 16px rgba(226, 83, 59, 0.8);
 }
 .gauge {
-  height: 10px;
+  height: 9px;
+  width: 150px;
+  max-width: 100%;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.4);
   overflow: hidden;
-  margin: 8px 4px 0;
+  margin: 8px auto 0;
   border: 1px solid var(--line);
 }
 .gauge-fill {
