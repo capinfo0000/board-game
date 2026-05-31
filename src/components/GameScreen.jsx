@@ -343,6 +343,9 @@ export default function GameScreen({
         {typeof secLeft === 'number' && (
           <div className={`turn-timer${secLeft <= 5 ? ' urgent' : ''}`}>⏱ 残り {secLeft} 秒</div>
         )}
+        {typeof secLeft === 'number' && (
+          <div className={`turn-timer${secLeft <= 5 ? ' urgent' : ''}`}>⏱ 残り {secLeft} 秒</div>
+        )}
         <div className="turn-banner">{banner}</div>
         <div className="hand">
           {bottomPlayer && !bottomPlayer.eliminated
